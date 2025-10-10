@@ -49,23 +49,37 @@ class CarState(CarStateBase, CarStateExt):
     ret.steerFaultTemporary = cp.vl["EPAS_AdasStatus"]["EPAS_EacErrorCode"] != 0
 
     # Cruise state
-    speed = min(int(cp_adas.vl["ACM_tsrCmd"]["ACM_tsrSpdDisClsMain"]), 85)
-    self.last_speed = speed if speed != 0 else self.last_speed
+    # speed = min(int(cp_adas.vl["ACM_tsrCmd"]["ACM_tsrSpdDisClsMain"]), 85)
+    # self.last_speed = speed if speed != 0 else self.last_speed
+
     ret.cruiseState.enabled = cp_cam.vl["ACM_Status"]["ACM_FeatureStatus"] == 1
+    if not ret.cruiseState.enabled:
+      speed = max(min(int(cp_adas.vl["Cluster"]["Cluster_VehicleSpeed"]), 140 if cp_adas.vl["Cluster"]["Cluster_Unit"] == 0 else 85), int(cp_adas.vl["ACM_tsrCmd"]["ACM_tsrSpdDisClsMain"]))
+      self.last_speed = speed if speed != 0 else self.last_speed
+
+    if ret.cruiseState.enabled and ret.gasPressed:
+      self.last_speed = cp_adas.vl["Cluster"]["Cluster_VehicleSpeed"]
+
+    ret.cruiseState.speed = self.last_speed * conversion
+
     # TODO: find cruise set speed on CAN
-    ret.cruiseState.speed = self.last_speed * CV.MPH_TO_MS  # detected speed limit
+    # ret.cruiseState.speed = self.last_speed * CV.MPH_TO_MS  # detected speed limit
+
     if not self.CP.openpilotLongitudinalControl:
       ret.cruiseState.speed = -1
     ret.cruiseState.available = True  # cp.vl["VDM_AdasSts"]["VDM_AdasInterfaceStatus"] == 1
     ret.cruiseState.standstill = cp.vl["VDM_AdasSts"]["VDM_AdasVehicleHoldStatus"] == 1
 
-    # TODO: log ACM_Unkown2=3 as a fault. need to filter it at the start and end of routes though
-    # ACM_FaultStatus hasn't been seen yet
+    # ACM_Status->ACM_FaultSupervisorState normally 1, appears to go to 3 when either:
+    # 1. car in park/not in drive (normal)
+    # 2. something (message from another ECU) ACM relies on is faulty
+    #  * ACM_FaultStatus will stay 0 since ACM itself isn't faulted
+    # TODO: ACM_FaultStatus hasn't been seen high yet, but log anyway
     ret.accFaulted = (cp_cam.vl["ACM_Status"]["ACM_FaultStatus"] == 1 or
                       # VDM_AdasFaultStatus=Brk_Intv is the default for some reason
-                      # VDM_AdasFaultStatus=Imps_Cmd was seen when sending it rapidly changing ACC enable commands
                       # VDM_AdasFaultStatus=Cntr_Fault isn't fully understood, but we've seen it in the wild
-                      cp.vl["VDM_AdasSts"]["VDM_AdasFaultStatus"] in (3,))  # 3=Imps_Cmd
+                      # VDM_AdasFaultStatus=Imps_Cmd was seen when sending it rapidly changing ACC enable commands, or when ACC command drops out
+                      cp.vl["VDM_AdasSts"]["VDM_AdasFaultStatus"] in (2, 3))  # 2=Cntr_Fault, 3=Imps_Cmd
 
     # Gear
     ret.gearShifter = GEAR_MAP.get(int(cp.vl["VDM_PropStatus"]["VDM_Prndl_Status"]), GearShifter.unknown)
