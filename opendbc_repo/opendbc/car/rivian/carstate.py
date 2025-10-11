@@ -9,11 +9,11 @@ from opendbc.car.common.conversions import Conversions as CV
 GearShifter = structs.CarState.GearShifter
 
 
-class CarState(CarStateBase, CarStateExt):
+class CarState(CarStateBase): #, CarStateExt):
   def __init__(self, CP, CP_SP):
     CarStateBase.__init__(self, CP, CP_SP)
-    CarStateExt.__init__(self, CP, CP_SP)
-    self.last_speed = 30
+    # CarStateExt.__init__(self, CP, CP_SP)
+    self.last_speed = 20
 
     self.acm_lka_hba_cmd = None
     self.sccm_wheel_touch = None
@@ -49,22 +49,13 @@ class CarState(CarStateBase, CarStateExt):
     ret.steerFaultTemporary = cp.vl["EPAS_AdasStatus"]["EPAS_EacErrorCode"] != 0
 
     # Cruise state
-    # speed = min(int(cp_adas.vl["ACM_tsrCmd"]["ACM_tsrSpdDisClsMain"]), 85)
-    # self.last_speed = speed if speed != 0 else self.last_speed
-
     ret.cruiseState.enabled = cp_cam.vl["ACM_Status"]["ACM_FeatureStatus"] == 1
     if not ret.cruiseState.enabled:
-      #speed = max(min(int(cp_adas.vl["Cluster"]["Cluster_VehicleSpeed"]), 140 if cp_adas.vl["Cluster"]["Cluster_Unit"] == 0 else 85), int(cp_adas.vl["ACM_tsrCmd"]["ACM_tsrSpdDisClsMain"]))
-      speed = min(int(cp_adas.vl["Cluster"]["Cluster_VehicleSpeed"]), 85)
-      self.last_speed = speed if speed > 30 else self.last_speed
-
-    if ret.gasPressed:
+      self.last_speed = max(int(cp_adas.vl["ACM_tsrCmd"]["ACM_tsrSpdDisClsMain"]), int(cp_adas.vl["Cluster"]["Cluster_VehicleSpeed"]))
+    elif ret.gasPressed: 
       self.last_speed = cp_adas.vl["Cluster"]["Cluster_VehicleSpeed"]
 
-    #ret.cruiseState.speed = self.last_speed * conversion
-
-    # TODO: find cruise set speed on CAN
-    ret.cruiseState.speed = self.last_speed * CV.MPH_TO_MS  
+    ret.cruiseState.speed = max(20 * CV.MPH_TO_MS, min(self.last_speed * conversion, 85 * CV.MPH_TO_MS))
 
     if not self.CP.openpilotLongitudinalControl:
       ret.cruiseState.speed = -1
@@ -113,5 +104,5 @@ class CarState(CarStateBase, CarStateExt):
       Bus.pt: CANParser(DBC[CP.carFingerprint][Bus.pt], [], 0),
       Bus.adas: CANParser(DBC[CP.carFingerprint][Bus.pt], [], 1),
       Bus.cam: CANParser(DBC[CP.carFingerprint][Bus.pt], [], 2),
-      #**CarStateExt.get_parser(CP, CP_SP),
+      # **CarStateExt.get_parser(CP, CP_SP),
     }
