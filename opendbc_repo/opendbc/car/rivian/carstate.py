@@ -4,7 +4,7 @@ from opendbc.car import Bus, structs
 from opendbc.car.interfaces import CarStateBase
 from opendbc.car.rivian.values import DBC, GEAR_MAP
 from opendbc.car.common.conversions import Conversions as CV
-from opendbc.sunnypilot.car.rivian.carstate_ext import CarStateExt
+# from opendbc.sunnypilot.car.rivian.carstate_ext import CarStateExt
 
 GearShifter = structs.CarState.GearShifter
 
@@ -54,16 +54,17 @@ class CarState(CarStateBase, CarStateExt):
 
     ret.cruiseState.enabled = cp_cam.vl["ACM_Status"]["ACM_FeatureStatus"] == 1
     if not ret.cruiseState.enabled:
-      speed = max(min(int(cp_adas.vl["Cluster"]["Cluster_VehicleSpeed"]), 140 if cp_adas.vl["Cluster"]["Cluster_Unit"] == 0 else 85), int(cp_adas.vl["ACM_tsrCmd"]["ACM_tsrSpdDisClsMain"]))
-      self.last_speed = speed if speed != 0 else self.last_speed
+      #speed = max(min(int(cp_adas.vl["Cluster"]["Cluster_VehicleSpeed"]), 140 if cp_adas.vl["Cluster"]["Cluster_Unit"] == 0 else 85), int(cp_adas.vl["ACM_tsrCmd"]["ACM_tsrSpdDisClsMain"]))
+      speed = min(int(cp_adas.vl["Cluster"]["Cluster_VehicleSpeed"]), 85)
+      self.last_speed = speed if speed > 30 else self.last_speed
 
-    if ret.cruiseState.enabled and ret.gasPressed:
+    if ret.gasPressed:
       self.last_speed = cp_adas.vl["Cluster"]["Cluster_VehicleSpeed"]
 
-    ret.cruiseState.speed = self.last_speed * conversion
+    #ret.cruiseState.speed = self.last_speed * conversion
 
     # TODO: find cruise set speed on CAN
-    # ret.cruiseState.speed = self.last_speed * CV.MPH_TO_MS  # detected speed limit
+    ret.cruiseState.speed = self.last_speed * CV.MPH_TO_MS  
 
     if not self.CP.openpilotLongitudinalControl:
       ret.cruiseState.speed = -1
@@ -102,7 +103,7 @@ class CarState(CarStateBase, CarStateExt):
     self.sccm_wheel_touch = copy.copy(cp.vl["SCCM_WheelTouch"])
     self.vdm_adas_status = copy.copy(cp.vl["VDM_AdasSts"])
 
-    CarStateExt.update(self, ret, can_parsers)
+    # CarStateExt.update(self, ret, can_parsers)
 
     return ret, ret_sp
 
@@ -112,5 +113,5 @@ class CarState(CarStateBase, CarStateExt):
       Bus.pt: CANParser(DBC[CP.carFingerprint][Bus.pt], [], 0),
       Bus.adas: CANParser(DBC[CP.carFingerprint][Bus.pt], [], 1),
       Bus.cam: CANParser(DBC[CP.carFingerprint][Bus.pt], [], 2),
-      **CarStateExt.get_parser(CP, CP_SP),
+      #**CarStateExt.get_parser(CP, CP_SP),
     }
