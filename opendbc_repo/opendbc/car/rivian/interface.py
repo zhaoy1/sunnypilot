@@ -26,7 +26,7 @@ class CarInterface(CarInterfaceBase):
     ret.radarUnavailable = True
 
     # TODO: pending finding/handling missing set speed and fixing up radar parser
-    ret.alphaLongitudinalAvailable = False
+    ret.alphaLongitudinalAvailable = True
     if alpha_long:
       ret.openpilotLongitudinalControl = True
       ret.safetyConfigs[0].safetyParam |= RivianSafetyFlags.LONG_CONTROL.value
@@ -40,11 +40,13 @@ class CarInterface(CarInterfaceBase):
   @staticmethod
   def _get_params_sp(stock_cp: structs.CarParams, ret: structs.CarParamsSP, candidate, fingerprint: dict[int, dict[int, int]],
                      car_fw: list[structs.CarParams.CarFw], alpha_long: bool, docs: bool) -> structs.CarParamsSP:
-    if 0x31a in fingerprint[5]:
-      ret.flags |= RivianFlagsSP.LONGITUDINAL_HARNESS_UPGRADE.value
-      stock_cp.radarUnavailable = False
-      stock_cp.enableBsm = True
-      stock_cp.alphaLongitudinalAvailable = True
+    #if 0x31a in fingerprint[5]:
+    #  ret.flags |= RivianFlagsSP.LONGITUDINAL_HARNESS_UPGRADE.value
+    #  stock_cp.radarUnavailable = False
+    #  stock_cp.enableBsm = True
+    #  stock_cp.alphaLongitudinalAvailable = True
+
+    stock_cp.alphaLongitudinalAvailable = True
 
     if alpha_long and stock_cp.alphaLongitudinalAvailable:
       stock_cp.openpilotLongitudinalControl = True
