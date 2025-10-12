@@ -71,7 +71,8 @@ class CarState(CarStateBase): #, CarStateExt):
         int(cp_adas.vl["Cluster"]["Cluster_VehicleSpeed"])
       )
     elif ret.gasPressed:
-      self.last_speed = cp_adas.vl["Cluster"]["Cluster_VehicleSpeed"]
+      cluster_speed = cp_adas.vl["Cluster"]["Cluster_VehicleSpeed"]
+      self.last_speed = cluster_speed if cluster_speed > self.last_speed else self.last_speed
 
     ret.cruiseState.speed = max(
       20 * CV.MPH_TO_MS,
