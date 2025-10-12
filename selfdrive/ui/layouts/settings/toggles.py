@@ -58,12 +58,6 @@ class TogglesLayout(Widget):
         icon="speed_limit.png"
       ),
       toggle_item(
-          "Use TSR as Cruise Speed",
-          "When enabled, cruise will follow the recognized traffic sign speed limit instead of current vehicle speed.",
-          self._params.get_bool("UseTSRAsCruiseSpeed"),
-          icon="speed_limit.png"
-      ),
-      toggle_item(
         "Enable Lane Departure Warnings",
         DESCRIPTIONS["IsLdwEnabled"],
         self._params.get_bool("IsLdwEnabled"),
