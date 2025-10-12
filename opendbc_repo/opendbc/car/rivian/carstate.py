@@ -4,6 +4,7 @@ from opendbc.car import Bus, structs
 from opendbc.car.interfaces import CarStateBase
 from opendbc.car.rivian.values import DBC, GEAR_MAP
 from opendbc.car.common.conversions import Conversions as CV
+from selfdrive.common.params import Params
 # from opendbc.sunnypilot.car.rivian.carstate_ext import CarStateExt
 
 GearShifter = structs.CarState.GearShifter
@@ -51,8 +52,12 @@ class CarState(CarStateBase): #, CarStateExt):
     # Cruise state
     ret.cruiseState.enabled = cp_cam.vl["ACM_Status"]["ACM_FeatureStatus"] == 1
 
-    # Read the speed limit from TSR (traffic sign recognition)
+    params = Params()
+    use_tsr_speed = params.get_bool("UseTSRAsCruiseSpeed")
+
+    # Read the speed limit from TSR (traffic sign recognition) and cluster speed
     tsr_speed = int(cp_adas.vl["ACM_tsrCmd"]["ACM_tsrSpdDisClsMain"])
+    cluster_speed = int(cp_adas.vl["Cluster"]["Cluster_VehicleSpeed"])
 
     # --- Adjust speed limit values if needed ---
     speed_adjust_map = {
@@ -66,12 +71,8 @@ class CarState(CarStateBase): #, CarStateExt):
     adjusted_tsr_speed = speed_adjust_map.get(tsr_speed, tsr_speed)
 
     if not ret.cruiseState.enabled:
-      self.last_speed = max(
-        adjusted_tsr_speed,
-        int(cp_adas.vl["Cluster"]["Cluster_VehicleSpeed"])
-      )
+      self.last_speed =  adjusted_tsr_speed if use_tsr_speed else cluster_speed
     elif ret.gasPressed:
-      cluster_speed = cp_adas.vl["Cluster"]["Cluster_VehicleSpeed"]
       self.last_speed = cluster_speed if cluster_speed > self.last_speed else self.last_speed
 
     ret.cruiseState.speed = max(
