@@ -259,4 +259,5 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
 
     // cruise speed
     {"UseTSRAsCruiseSpeed", {PERSISTENT | BACKUP, BOOL, "0"}},
+    {"CruiseSpeedDelta", {CLEAR_ON_MANAGER_START, STRING, "0"}},
 };
