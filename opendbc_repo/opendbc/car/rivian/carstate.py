@@ -50,12 +50,33 @@ class CarState(CarStateBase): #, CarStateExt):
 
     # Cruise state
     ret.cruiseState.enabled = cp_cam.vl["ACM_Status"]["ACM_FeatureStatus"] == 1
+
+    # Read the speed limit from TSR (traffic sign recognition)
+    tsr_speed = int(cp_adas.vl["ACM_tsrCmd"]["ACM_tsrSpdDisClsMain"])
+
+    # --- Adjust speed limit values if needed ---
+    speed_adjust_map = {
+      35: 40,
+      60: 68,
+      70: 78,
+      100: 110
+    }
+
+    # Apply mapping or keep as-is if not listed
+    adjusted_tsr_speed = speed_adjust_map.get(tsr_speed, tsr_speed)
+
     if not ret.cruiseState.enabled:
-      self.last_speed = max(int(cp_adas.vl["ACM_tsrCmd"]["ACM_tsrSpdDisClsMain"]), int(cp_adas.vl["Cluster"]["Cluster_VehicleSpeed"]))
-    elif ret.gasPressed: 
+      self.last_speed = max(
+        adjusted_tsr_speed,
+        int(cp_adas.vl["Cluster"]["Cluster_VehicleSpeed"])
+      )
+    elif ret.gasPressed:
       self.last_speed = cp_adas.vl["Cluster"]["Cluster_VehicleSpeed"]
 
-    ret.cruiseState.speed = max(20 * CV.MPH_TO_MS, min(self.last_speed * conversion, 85 * CV.MPH_TO_MS))
+    ret.cruiseState.speed = max(
+      20 * CV.MPH_TO_MS,
+      min(self.last_speed * conversion, 85 * CV.MPH_TO_MS)
+    )
 
     if not self.CP.openpilotLongitudinalControl:
       ret.cruiseState.speed = -1
