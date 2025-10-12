@@ -48,8 +48,19 @@ OnroadWindow::OnroadWindow(QWidget *parent) : QWidget(parent) {
   plusBtn->setGeometry(50, 300, 250, 250);  // top-left position, adjust as needed
   minusBtn->setGeometry(50, 600, 250, 250);
 
-  plusBtn->setStyleSheet("background: transparent; font-size: 240px; color: white;");
-  minusBtn->setStyleSheet("background: transparent; font-size: 240px; color: white;");
+  plusBtn->setStyleSheet(
+    "background-color: rgba(0,0,0,0);"  // fully transparent
+    "border: none;"                     // remove border
+    "font-size: 240px;"                 // large text
+    "color: white;"                     // text color
+  );
+
+  minusBtn->setStyleSheet(
+      "background-color: rgba(0,0,0,0);"
+      "border: none;"
+      "font-size: 240px;"
+      "color: white;"
+  );
 
   QObject::connect(plusBtn, &QPushButton::clicked, this, []() {
     Params().put("CruiseSpeedDelta", "1");
