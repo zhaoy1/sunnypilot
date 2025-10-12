@@ -48,6 +48,12 @@ class CarInterface(CarInterfaceBase):
 
     stock_cp.alphaLongitudinalAvailable = True
 
+    ret.flags |= RivianFlagsSP.LONGITUDINAL_HARNESS_UPGRADE.value
+    stock_cp.radarUnavailable = True
+    stock_cp.enableBsm = False
+    stock_cp.alphaLongitudinalAvailable = True
+    
+
     if alpha_long and stock_cp.alphaLongitudinalAvailable:
       stock_cp.openpilotLongitudinalControl = True
       stock_cp.safetyConfigs[0].safetyParam |= RivianSafetyFlags.LONG_CONTROL.value
