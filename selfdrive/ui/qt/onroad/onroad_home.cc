@@ -46,7 +46,7 @@ OnroadWindow::OnroadWindow(QWidget *parent) : QWidget(parent) {
   QPushButton *minusBtn = new QPushButton("-", this);
 
   plusBtn->setGeometry(50, 300, 250, 250);  // top-left position, adjust as needed
-  minusBtn->setGeometry(50, 600, 250, 250);
+  minusBtn->setGeometry(50, 550, 250, 250);
 
   plusBtn->setStyleSheet(
     "background-color: rgba(0,0,0,0);"  // fully transparent
@@ -58,7 +58,7 @@ OnroadWindow::OnroadWindow(QWidget *parent) : QWidget(parent) {
   minusBtn->setStyleSheet(
       "background-color: rgba(0,0,0,0);"
       "border: none;"
-      "font-size: 240px;"
+      "font-size: 280px;"
       "color: white;"
   );
 
