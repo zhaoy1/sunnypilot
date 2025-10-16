@@ -48,6 +48,13 @@ TogglesPanel::TogglesPanel(SettingsWindow *parent) : ListWidget(parent) {
       false,
     },
     {
+      "UseTSRAsCruiseSpeed",
+      tr("Use TSR as Cruise Speed"),
+      tr("Cruise will follow the recognized traffic sign speed limit instead of current vehicle speed."),
+      "../assets/icons/speed_limit.png",
+      false,  // false means it does not require a restart
+    },
+    {
       "IsLdwEnabled",
       tr("Enable Lane Departure Warnings"),
       tr("Receive alerts to steer back into the lane when your vehicle drifts over a detected lane line without a turn signal activated while driving over 31 mph (50 km/h)."),

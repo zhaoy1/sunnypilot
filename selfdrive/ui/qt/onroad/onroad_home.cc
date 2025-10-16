@@ -41,6 +41,33 @@ OnroadWindow::OnroadWindow(QWidget *parent) : QWidget(parent) {
   QObject::connect(uiState(), &UIState::uiUpdate, this, &OnroadWindow::updateState);
   QObject::connect(uiState(), &UIState::offroadTransition, this, &OnroadWindow::offroadTransition);
 #endif
+
+  QPushButton *plusBtn = new QPushButton("+", this);
+  QPushButton *minusBtn = new QPushButton("-", this);
+
+  plusBtn->setGeometry(50, 300, 250, 250);  // top-left position, adjust as needed
+  minusBtn->setGeometry(50, 550, 250, 250);
+
+  plusBtn->setStyleSheet(
+    "background-color: rgba(0,0,0,0);"  // fully transparent
+    "border: none;"                     // remove border
+    "font-size: 240px;"                 // large text
+    "color: white;"                     // text color
+  );
+
+  minusBtn->setStyleSheet(
+      "background-color: rgba(0,0,0,0);"
+      "border: none;"
+      "font-size: 280px;"
+      "color: white;"
+  );
+
+  QObject::connect(plusBtn, &QPushButton::clicked, this, []() {
+    Params().put("CruiseSpeedDelta", "1");
+  });
+  QObject::connect(minusBtn, &QPushButton::clicked, this, []() {
+    Params().put("CruiseSpeedDelta", "-1");
+  });
 }
 
 void OnroadWindow::updateState(const UIState &s) {
