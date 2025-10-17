@@ -50,15 +50,15 @@ OnroadWindow::OnroadWindow(QWidget *parent) : QWidget(parent) {
 
   plusBtn->setStyleSheet(
     "background-color: rgba(0,0,0,0);"  // fully transparent
-    "border: 1px solid rgba(255,255,255,0.6);"                     // remove border
+    "border: none;"                     // remove border
     "font-size: 240px;"                 // large text
     "color: white;"                     // text color
   );
 
   minusBtn->setStyleSheet(
       "background-color: rgba(0,0,0,0);"
-      "border: 1px solid rgba(255,255,255,0.6);"
-      "font-size: 280px;"
+      "border: none;"
+      "font-size: 320px;"
       "color: white;"
   );
 
