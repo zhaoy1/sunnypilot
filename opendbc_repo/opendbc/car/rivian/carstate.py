@@ -4,9 +4,6 @@ from opendbc.car import Bus, structs
 from opendbc.car.interfaces import CarStateBase
 from opendbc.car.rivian.values import DBC, GEAR_MAP
 from opendbc.car.common.conversions import Conversions as CV
-from openpilot.common.params import Params
-import cereal.messaging as messaging
-
 # from opendbc.sunnypilot.car.rivian.carstate_ext import CarStateExt
 
 GearShifter = structs.CarState.GearShifter
@@ -21,10 +18,6 @@ class CarState(CarStateBase): #, CarStateExt):
     self.acm_lka_hba_cmd = None
     self.sccm_wheel_touch = None
     self.vdm_adas_status = None
-
-    # create SubMaster (if not already created in this module)
-    self.sm = messaging.SubMaster(['liveMapData', 'carState'])  # add other channels you already use
-
 
   def update(self, can_parsers) -> tuple[structs.CarState, structs.CarStateSP]:
     cp = can_parsers[Bus.pt]
@@ -58,71 +51,29 @@ class CarState(CarStateBase): #, CarStateExt):
     # Cruise state
     ret.cruiseState.enabled = cp_cam.vl["ACM_Status"]["ACM_FeatureStatus"] == 1
 
-    # Live Map data: check that the message is present and contains a valid speed limit
-    # field names vary slightly across forks/versions; try the common ones below
-    self.sm.update()
-    lmd = self.sm['liveMapData']
-    speed_limit = 0
-    speed_limit_valid = False
+    # Read the speed limit from TSR (traffic sign recognition)
+    tsr_speed = int(cp_adas.vl["ACM_tsrCmd"]["ACM_tsrSpdDisClsMain"])
 
-    # common field names you might see:
-    # lmd.speedLimit (int, usually km/h) and lmd.speedLimitValid (bool)
-    # or lmd.speedLimitKm/h etc. — use getattr() to be robust
-
-    if lmd.valid:  # top-level validity flag for the message
-      # try common attributes safely
-      if hasattr(lmd, 'speedLimit') and lmd.speedLimit > 0:
-        speed_limit = lmd.speedLimit
-        # many implementations also have a boolean flag:
-        speed_limit_valid = getattr(lmd, 'speedLimitValid', True)
-      else:
-        # try alternative name(s) if present
-        speed_limit = getattr(lmd, 'speed_limit', None) or getattr(lmd, 'speedLimitKph', None)
-        if speed_limit is not None:
-          speed_limit_valid = True
-
-    # --- read and adjust TSR speed ---
-    #tsr_speed = int(cp_adas.vl["ACM_tsrCmd"]["ACM_tsrSpdDisClsMain"])
-
-    # Apply mapping or keep as-is if not listed
-    # adjusted_tsr_speed = speed_adjust_map.get(tsr_speed, tsr_speed)
+    # --- Adjust speed limit values if needed ---
     speed_adjust_map = {
-      35: 42,
-      40: 46,
+      35: 40,
       60: 68,
       70: 78,
       100: 110
     }
 
-    adjusted_tsr_speed = speed_adjust_map.get(speed_limit, speed_limit)
+    # Apply mapping or keep as-is if not listed
+    adjusted_tsr_speed = speed_adjust_map.get(tsr_speed, tsr_speed)
 
-    # --- read parameter and button action ---
-    params = Params()
-    use_tsr = params.get_bool("UseTSRAsCruiseSpeed")
-
-    try:
-      delta = int(params.get("CruiseSpeedDelta") or b"0")
-    except Exception:
-      delta = 0
-
-    # --- determine base speed ---
     if not ret.cruiseState.enabled:
-      cluster_speed = int(cp_adas.vl["Cluster"]["Cluster_VehicleSpeed"])
-      if use_tsr:
-        self.last_speed = max(adjusted_tsr_speed, cluster_speed)
-      else:
-        self.last_speed = cluster_speed
-
+      self.last_speed = max(
+        adjusted_tsr_speed,
+        int(cp_adas.vl["Cluster"]["Cluster_VehicleSpeed"])
+      )
     elif ret.gasPressed:
       cluster_speed = cp_adas.vl["Cluster"]["Cluster_VehicleSpeed"]
-      self.last_speed = max(cluster_speed, self.last_speed)
+      self.last_speed = cluster_speed if cluster_speed > self.last_speed else self.last_speed
 
-    # --- apply delta from + / – buttons ---
-    if delta != 0:
-      self.last_speed += delta
-      params.put("CruiseSpeedDelta", "0")  # reset after applying
-
-    # --- final cruise speed ---
     ret.cruiseState.speed = max(
       20 * CV.MPH_TO_MS,
       min(self.last_speed * conversion, 85 * CV.MPH_TO_MS)
