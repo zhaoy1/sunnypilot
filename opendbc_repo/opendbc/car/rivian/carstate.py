@@ -5,7 +5,7 @@ from opendbc.car.interfaces import CarStateBase
 from opendbc.car.rivian.values import DBC, GEAR_MAP
 from opendbc.car.common.conversions import Conversions as CV
 from openpilot.common.params import Params
-import selfdrive.messaging as messaging
+import cereal.messaging as messaging
 
 # from opendbc.sunnypilot.car.rivian.carstate_ext import CarStateExt
 
