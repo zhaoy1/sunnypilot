@@ -4,7 +4,7 @@ from opendbc.car import Bus, structs
 from opendbc.car.interfaces import CarStateBase
 from opendbc.car.rivian.values import DBC, GEAR_MAP
 from opendbc.car.common.conversions import Conversions as CV
-from openpilot.common.params import Params
+# from openpilot.common.params import Params
 # from opendbc.sunnypilot.car.rivian.carstate_ext import CarStateExt
 
 GearShifter = structs.CarState.GearShifter
@@ -52,46 +52,13 @@ class CarState(CarStateBase): #, CarStateExt):
     # Cruise state
     ret.cruiseState.enabled = cp_cam.vl["ACM_Status"]["ACM_FeatureStatus"] == 1
 
-    # --- read parameter and button action ---
-    params = Params()
-    use_tsr = params.get_bool("UseTSRAsCruiseSpeed")
-
-    try:
-      delta = int(params.get("CruiseSpeedDelta") or b"0")
-    except Exception:
-      delta = 0
-
-    # --- read and adjust TSR speed ---
-    tsr_speed = int(cp_adas.vl["ACM_tsrCmd"]["ACM_tsrSpdDisClsMain"])
-    speed_adjust_map = {
-      35: 42,
-      40: 46,
-      60: 68,
-      70: 78,
-      100: 110
-    }
-
-    # Apply mapping or keep as-is if not listed
-    adjusted_tsr_speed = speed_adjust_map.get(tsr_speed, tsr_speed)
-
-    # --- determine base speed ---
     if not ret.cruiseState.enabled:
       cluster_speed = int(cp_adas.vl["Cluster"]["Cluster_VehicleSpeed"])
-      if use_tsr:
-        self.last_speed = max(adjusted_tsr_speed, cluster_speed)
-      else:
-        self.last_speed = cluster_speed
-
+      self.last_speed = cluster_speed
     elif ret.gasPressed:
       cluster_speed = cp_adas.vl["Cluster"]["Cluster_VehicleSpeed"]
       self.last_speed = max(cluster_speed, self.last_speed)
 
-    # --- apply delta from + / – buttons ---
-    if delta != 0:
-      self.last_speed += delta
-      params.put("CruiseSpeedDelta", "0")  # reset after applying
-
-    # --- final cruise speed ---
     ret.cruiseState.speed = max(
       20 * CV.MPH_TO_MS,
       min(self.last_speed * conversion, 85 * CV.MPH_TO_MS)
