@@ -33,12 +33,15 @@ class CruiseButton(Widget):
     self._is_cruise_set = 0 < v_cruise < 255
 
   def handle_mouse_event(self) -> bool:
+    # Only handle mouse events when cruise is set
+    if not self._is_cruise_set:
+      return False
+
     mouse_pos = rl.get_mouse_position()
 
     # Check "+" button
     if rl.check_collision_point_rec(mouse_pos, self._plus_rect):
-      if (rl.is_mouse_button_released(rl.MouseButton.MOUSE_BUTTON_LEFT) and
-          self._is_cruise_set):
+      if rl.is_mouse_button_released(rl.MouseButton.MOUSE_BUTTON_LEFT):
         # Increment cruise speed delta
         try:
           current_delta = self._params.get("CruiseSpeedDelta", encoding='utf-8')
@@ -51,8 +54,7 @@ class CruiseButton(Widget):
 
     # Check "-" button
     if rl.check_collision_point_rec(mouse_pos, self._minus_rect):
-      if (rl.is_mouse_button_released(rl.MouseButton.MOUSE_BUTTON_LEFT) and
-          self._is_cruise_set):
+      if rl.is_mouse_button_released(rl.MouseButton.MOUSE_BUTTON_LEFT):
         # Decrement cruise speed delta
         try:
           current_delta = self._params.get("CruiseSpeedDelta", encoding='utf-8')
@@ -66,6 +68,10 @@ class CruiseButton(Widget):
     return False
 
   def _render(self, rect: rl.Rectangle) -> None:
+    # Only render buttons when cruise is set
+    if not self._is_cruise_set:
+      return
+
     # White text color, fully opaque
     self._white_color.a = 255
     font = gui_app.font()
