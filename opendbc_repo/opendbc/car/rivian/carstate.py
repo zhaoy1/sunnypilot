@@ -4,15 +4,16 @@ from opendbc.car import Bus, structs
 from opendbc.car.interfaces import CarStateBase
 from opendbc.car.rivian.values import DBC, GEAR_MAP
 from opendbc.car.common.conversions import Conversions as CV
-from opendbc.sunnypilot.car.rivian.carstate_ext import CarStateExt
+from openpilot.common.params import Params
+# from opendbc.sunnypilot.car.rivian.carstate_ext import CarStateExt
 
 GearShifter = structs.CarState.GearShifter
 
 
-class CarState(CarStateBase, CarStateExt):
+class CarState(CarStateBase): #, CarStateExt):
   def __init__(self, CP, CP_SP):
     CarStateBase.__init__(self, CP, CP_SP)
-    CarStateExt.__init__(self, CP, CP_SP)
+    # CarStateExt.__init__(self, CP, CP_SP)
     self.last_speed = 30
 
     self.acm_lka_hba_cmd = None
@@ -49,11 +50,53 @@ class CarState(CarStateBase, CarStateExt):
     ret.steerFaultTemporary = cp.vl["EPAS_AdasStatus"]["EPAS_EacErrorCode"] != 0
 
     # Cruise state
-    speed = min(int(cp_adas.vl["ACM_tsrCmd"]["ACM_tsrSpdDisClsMain"]), 85)
-    self.last_speed = speed if speed != 0 else self.last_speed
     ret.cruiseState.enabled = cp_cam.vl["ACM_Status"]["ACM_FeatureStatus"] == 1
-    # TODO: find cruise set speed on CAN
-    ret.cruiseState.speed = self.last_speed * CV.MPH_TO_MS  # detected speed limit
+
+    # --- read parameter and button action ---
+    params = Params()
+    use_tsr = params.get_bool("UseTSRAsCruiseSpeed")
+
+    try:
+      delta = int(params.get("CruiseSpeedDelta") or b"0")
+    except Exception:
+      delta = 0
+
+    # --- read and adjust TSR speed ---
+    tsr_speed = int(cp_adas.vl["ACM_tsrCmd"]["ACM_tsrSpdDisClsMain"])
+    speed_adjust_map = {
+      35: 42,
+      40: 46,
+      60: 68,
+      70: 78,
+      100: 110
+    }
+
+    # Apply mapping or keep as-is if not listed
+    adjusted_tsr_speed = speed_adjust_map.get(tsr_speed, tsr_speed)
+
+    # --- determine base speed ---
+    if not ret.cruiseState.enabled:
+      cluster_speed = int(cp_adas.vl["Cluster"]["Cluster_VehicleSpeed"])
+      if use_tsr:
+        self.last_speed = max(adjusted_tsr_speed, cluster_speed)
+      else:
+        self.last_speed = cluster_speed
+
+    elif ret.gasPressed:
+      cluster_speed = cp_adas.vl["Cluster"]["Cluster_VehicleSpeed"]
+      self.last_speed = max(cluster_speed, self.last_speed)
+
+    # --- apply delta from + / – buttons ---
+    if delta != 0:
+      self.last_speed += delta
+      params.put("CruiseSpeedDelta", "0")  # reset after applying
+
+    # --- final cruise speed ---
+    ret.cruiseState.speed = max(
+      20 * CV.MPH_TO_MS,
+      min(self.last_speed * conversion, 85 * CV.MPH_TO_MS)
+    )
+
     if not self.CP.openpilotLongitudinalControl:
       ret.cruiseState.speed = -1
     ret.cruiseState.available = True  # cp.vl["VDM_AdasSts"]["VDM_AdasInterfaceStatus"] == 1
@@ -95,7 +138,7 @@ class CarState(CarStateBase, CarStateExt):
     self.sccm_wheel_touch = copy.copy(cp.vl["SCCM_WheelTouch"])
     self.vdm_adas_status = copy.copy(cp.vl["VDM_AdasSts"])
 
-    CarStateExt.update(self, ret, can_parsers)
+    # CarStateExt.update(self, ret, can_parsers)
 
     return ret, ret_sp
 
@@ -105,5 +148,5 @@ class CarState(CarStateBase, CarStateExt):
       Bus.pt: CANParser(DBC[CP.carFingerprint][Bus.pt], [], 0),
       Bus.adas: CANParser(DBC[CP.carFingerprint][Bus.pt], [], 1),
       Bus.cam: CANParser(DBC[CP.carFingerprint][Bus.pt], [], 2),
-      **CarStateExt.get_parser(CP, CP_SP),
+      # **CarStateExt.get_parser(CP, CP_SP),
     }
