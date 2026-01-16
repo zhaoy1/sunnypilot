@@ -1,4 +1,3 @@
-import time
 import pyray as rl
 from openpilot.common.params import Params
 from openpilot.selfdrive.ui.ui_state import ui_state
@@ -13,16 +12,15 @@ class CruiseButton(Widget):
     self._params = Params()
     self._is_cruise_set: bool = False
     self._engageable: bool = False
-    self._last_debug_time: float = 0.0
 
     self._white_color: rl.Color = rl.Color(255, 255, 255, 255)
     self._plus_rect = rl.Rectangle(50, 300, 250, 250)  # "+" button position
-    self._minus_rect = rl.Rectangle(50, 570, 250, 250)  # "-" button position (20px gap below +)
-    self._font_size = 240  # large text size as specified
+    self._minus_rect = rl.Rectangle(50, 570, 250, 250)  # "-" button position
+    self._font_size = 240  # large text size
 
   def set_rect(self, rect: rl.Rectangle) -> None:
     self._plus_rect.x, self._plus_rect.y = rect.x, rect.y
-    self._minus_rect.x, self._minus_rect.y = rect.x, rect.y + 270  # 20px gap
+    self._minus_rect.x, self._minus_rect.y = rect.x, rect.y + 270
 
   def _update_state(self) -> None:
     selfdrive_state = ui_state.sm["selfdriveState"]
@@ -41,40 +39,24 @@ class CruiseButton(Widget):
 
     mouse_pos = rl.get_mouse_position()
 
-    # DEBUG: Log mouse position when button is pressed
-    if rl.is_mouse_button_pressed(rl.MouseButton.MOUSE_BUTTON_LEFT):
-      print(f"[CruiseButton] Mouse pressed at: ({mouse_pos.x}, {mouse_pos.y})")
-
     # Check "+" button
     if rl.check_collision_point_rec(mouse_pos, self._plus_rect):
-      print(f"[CruiseButton] Mouse over + button")
       if rl.is_mouse_button_released(rl.MouseButton.MOUSE_BUTTON_LEFT):
         # Increment cruise speed delta
-        try:
-          current_delta = self._params.get("CruiseSpeedDelta", encoding='utf-8')
-          delta_value = int(current_delta) if current_delta else 0
-          delta_value += 1
-          self._params.put("CruiseSpeedDelta", str(delta_value))
-          print(f"[CruiseButton] + pressed, delta now: {delta_value}")
-        except Exception as e:
-          self._params.put("CruiseSpeedDelta", "1")
-          print(f"[CruiseButton] + pressed (init), error: {e}")
+        current_delta = self._params.get("CruiseSpeedDelta", encoding='utf-8')
+        delta_value = int(current_delta) if current_delta else 0
+        delta_value += 1
+        self._params.put("CruiseSpeedDelta", str(delta_value))
       return True
 
     # Check "-" button
     if rl.check_collision_point_rec(mouse_pos, self._minus_rect):
-      print(f"[CruiseButton] Mouse over - button")
       if rl.is_mouse_button_released(rl.MouseButton.MOUSE_BUTTON_LEFT):
         # Decrement cruise speed delta
-        try:
-          current_delta = self._params.get("CruiseSpeedDelta", encoding='utf-8')
-          delta_value = int(current_delta) if current_delta else 0
-          delta_value -= 1
-          self._params.put("CruiseSpeedDelta", str(delta_value))
-          print(f"[CruiseButton] - pressed, delta now: {delta_value}")
-        except Exception as e:
-          self._params.put("CruiseSpeedDelta", "-1")
-          print(f"[CruiseButton] - pressed (init), error: {e}")
+        current_delta = self._params.get("CruiseSpeedDelta", encoding='utf-8')
+        delta_value = int(current_delta) if current_delta else 0
+        delta_value -= 1
+        self._params.put("CruiseSpeedDelta", str(delta_value))
       return True
 
     return False
@@ -93,12 +75,6 @@ class CruiseButton(Widget):
     # White text color, fully opaque
     self._white_color.a = 255
     font = gui_app.font()
-
-    # DEBUG: Print button positions every 5 seconds
-    current_time = time.time()
-    if current_time - self._last_debug_time > 5:
-      print(f"[CruiseButton] Buttons rendered at: +({self._plus_rect.x},{self._plus_rect.y}) -({self._minus_rect.x},{self._minus_rect.y})")
-      self._last_debug_time = current_time
 
     # Draw "+" button
     plus_center_x = int(self._plus_rect.x + self._plus_rect.width // 2)
