@@ -100,10 +100,6 @@ class AugmentedRoadView(CameraView):
     # End clipping region
     rl.end_scissor_mode()
 
-    # TEST: Draw buttons OUTSIDE scissor mode to see if clipping is the issue
-    rl.draw_rectangle(100, 100, 200, 200, rl.Color(255, 0, 0, 255))
-    rl.draw_rectangle(100, 400, 200, 200, rl.Color(0, 255, 0, 255))
-
     # Handle click events if no HUD interaction occurred
     if not self._hud_renderer.handle_mouse_event():
       if self._click_callback and rl.is_mouse_button_pressed(rl.MouseButton.MOUSE_BUTTON_LEFT):

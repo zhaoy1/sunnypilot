@@ -103,10 +103,6 @@ class HudRenderer(Widget):
 
   def _render(self, rect: rl.Rectangle) -> None:
     """Render HUD elements to the screen."""
-    # ULTRA SIMPLE TEST - Draw full screen red rectangle
-    # If this doesn't show, the UI is not running this code AT ALL
-    rl.draw_rectangle(0, 0, 2160, 1080, rl.Color(255, 0, 0, 128))
-
     # Draw the header background
     rl.draw_rectangle_gradient_v(
       int(rect.x),
@@ -127,18 +123,9 @@ class HudRenderer(Widget):
     button_y = rect.y + UI_CONFIG.border_size
     self._exp_button.render(rl.Rectangle(button_x, button_y, UI_CONFIG.button_size, UI_CONFIG.button_size))
 
-    # TEST: Draw a red rectangle to see if anything renders
-    rl.draw_rectangle(int(rect.x + 50), int(rect.y + 50), 200, 200, rl.Color(255, 0, 0, 255))
-
-    # TEST: Draw simple text directly
-    rl.draw_text_ex(self._font_bold, "+", rl.Vector2(rect.x + 100, rect.y + 100), 240, 0, rl.WHITE)
-
-    # Draw another rectangle lower
-    rl.draw_rectangle(int(rect.x + 50), int(rect.y + 350), 200, 200, rl.Color(0, 255, 0, 255))
-    rl.draw_text_ex(self._font_bold, "-", rl.Vector2(rect.x + 100, rect.y + 400), 240, 0, rl.WHITE)
-
-    # Render cruise speed button at fixed position (50, 300)
-    self._cruise_button.render(rect)
+    # Render cruise speed control buttons (only when cruise is enabled)
+    if self.is_cruise_set:
+      self._cruise_button.render(rect)
 
   def handle_mouse_event(self) -> bool:
     # Check cruise button first (it's on top visually)
