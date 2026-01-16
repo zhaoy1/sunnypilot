@@ -68,10 +68,6 @@ class CruiseButton(Widget):
     return False
 
   def _render(self, rect: rl.Rectangle) -> None:
-    # Only render buttons when cruise is set
-    if not self._is_cruise_set:
-      return
-
     # White text color, fully opaque
     self._white_color.a = 255
     font = gui_app.font()
