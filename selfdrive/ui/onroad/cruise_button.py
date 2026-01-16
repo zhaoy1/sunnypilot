@@ -48,6 +48,9 @@ class CruiseButton(Widget):
           delta_value = int(current_delta) if current_delta else 0
           delta_value += 1
           self._params.put("CruiseSpeedDelta", str(delta_value))
+          # Write to a test file to verify button clicks work
+          with open("/tmp/cruise_button_test.txt", "a") as f:
+            f.write(f"+ clicked, delta={delta_value}\n")
         return True
 
       # Check "-" button
@@ -58,11 +61,15 @@ class CruiseButton(Widget):
           delta_value = int(current_delta) if current_delta else 0
           delta_value -= 1
           self._params.put("CruiseSpeedDelta", str(delta_value))
+          # Write to a test file to verify button clicks work
+          with open("/tmp/cruise_button_test.txt", "a") as f:
+            f.write(f"- clicked, delta={delta_value}\n")
         return True
 
-    except Exception:
-      # Silently ignore any errors to prevent crashes
-      pass
+    except Exception as e:
+      # Log errors to help debug
+      with open("/tmp/cruise_button_error.txt", "a") as f:
+        f.write(f"Error: {e}\n")
 
     return False
 
