@@ -103,6 +103,10 @@ class HudRenderer(Widget):
 
   def _render(self, rect: rl.Rectangle) -> None:
     """Render HUD elements to the screen."""
+    # ULTRA SIMPLE TEST - Draw full screen red rectangle
+    # If this doesn't show, the UI is not running this code AT ALL
+    rl.draw_rectangle(0, 0, 2160, 1080, rl.Color(255, 0, 0, 128))
+
     # Draw the header background
     rl.draw_rectangle_gradient_v(
       int(rect.x),
