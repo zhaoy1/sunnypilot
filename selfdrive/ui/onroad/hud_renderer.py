@@ -123,13 +123,15 @@ class HudRenderer(Widget):
     button_y = rect.y + UI_CONFIG.border_size
     self._exp_button.render(rl.Rectangle(button_x, button_y, UI_CONFIG.button_size, UI_CONFIG.button_size))
 
-    # TEST: Draw simple text directly to see if it shows up
-    test_x = rect.x + 50
-    test_y = rect.y + 50
-    rl.draw_text_ex(self._font_bold, "+", rl.Vector2(test_x, test_y), 240, 0, COLORS.white)
+    # TEST: Draw a red rectangle to see if anything renders
+    rl.draw_rectangle(int(rect.x + 50), int(rect.y + 50), 200, 200, rl.Color(255, 0, 0, 255))
 
-    test_y2 = rect.y + 350
-    rl.draw_text_ex(self._font_bold, "-", rl.Vector2(test_x, test_y2), 240, 0, COLORS.white)
+    # TEST: Draw simple text directly
+    rl.draw_text_ex(self._font_bold, "+", rl.Vector2(rect.x + 100, rect.y + 100), 240, 0, rl.WHITE)
+
+    # Draw another rectangle lower
+    rl.draw_rectangle(int(rect.x + 50), int(rect.y + 350), 200, 200, rl.Color(0, 255, 0, 255))
+    rl.draw_text_ex(self._font_bold, "-", rl.Vector2(rect.x + 100, rect.y + 400), 240, 0, rl.WHITE)
 
     # Render cruise speed button at fixed position (50, 300)
     self._cruise_button.render(rect)
