@@ -33,32 +33,7 @@ class CruiseButton(Widget):
     self._is_cruise_set = 0 < v_cruise < 255
 
   def handle_mouse_event(self) -> bool:
-    # DEBUG: Always handle mouse events (skip cruise check for debugging)
-    # if not self._is_cruise_set:
-    #   return False
-
-    mouse_pos = rl.get_mouse_position()
-
-    # Check "+" button
-    if rl.check_collision_point_rec(mouse_pos, self._plus_rect):
-      if rl.is_mouse_button_released(rl.MouseButton.MOUSE_BUTTON_LEFT):
-        # Increment cruise speed delta
-        current_delta = self._params.get("CruiseSpeedDelta", encoding='utf-8')
-        delta_value = int(current_delta) if current_delta else 0
-        delta_value += 1
-        self._params.put("CruiseSpeedDelta", str(delta_value))
-      return True
-
-    # Check "-" button
-    if rl.check_collision_point_rec(mouse_pos, self._minus_rect):
-      if rl.is_mouse_button_released(rl.MouseButton.MOUSE_BUTTON_LEFT):
-        # Decrement cruise speed delta
-        current_delta = self._params.get("CruiseSpeedDelta", encoding='utf-8')
-        delta_value = int(current_delta) if current_delta else 0
-        delta_value -= 1
-        self._params.put("CruiseSpeedDelta", str(delta_value))
-      return True
-
+    # DEBUG: Skip all event handling to test if this is causing the crash
     return False
 
   def _update_button_rects(self, rect: rl.Rectangle) -> None:
