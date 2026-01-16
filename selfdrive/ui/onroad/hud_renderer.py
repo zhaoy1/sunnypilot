@@ -123,9 +123,8 @@ class HudRenderer(Widget):
     button_y = rect.y + UI_CONFIG.border_size
     self._exp_button.render(rl.Rectangle(button_x, button_y, UI_CONFIG.button_size, UI_CONFIG.button_size))
 
-    # Render cruise speed control buttons (only when cruise is enabled)
-    if self.is_cruise_set:
-      self._cruise_button.render(rect)
+    # Render cruise speed control buttons (always visible for debugging)
+    self._cruise_button.render(rect)
 
   def handle_mouse_event(self) -> bool:
     # Check cruise button first (it's on top visually)

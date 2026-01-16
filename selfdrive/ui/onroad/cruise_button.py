@@ -33,9 +33,9 @@ class CruiseButton(Widget):
     self._is_cruise_set = 0 < v_cruise < 255
 
   def handle_mouse_event(self) -> bool:
-    # Only handle mouse events when cruise is set
-    if not self._is_cruise_set:
-      return False
+    # DEBUG: Always handle mouse events (skip cruise check for debugging)
+    # if not self._is_cruise_set:
+    #   return False
 
     mouse_pos = rl.get_mouse_position()
 
@@ -48,8 +48,10 @@ class CruiseButton(Widget):
           delta_value = int(current_delta) if current_delta else 0
           delta_value += 1
           self._params.put("CruiseSpeedDelta", str(delta_value))
-        except Exception:
+          print(f"[CruiseButton] + pressed, delta now: {delta_value}")
+        except Exception as e:
           self._params.put("CruiseSpeedDelta", "1")
+          print(f"[CruiseButton] + pressed (init), error: {e}")
       return True
 
     # Check "-" button
@@ -61,8 +63,10 @@ class CruiseButton(Widget):
           delta_value = int(current_delta) if current_delta else 0
           delta_value -= 1
           self._params.put("CruiseSpeedDelta", str(delta_value))
-        except Exception:
+          print(f"[CruiseButton] - pressed, delta now: {delta_value}")
+        except Exception as e:
           self._params.put("CruiseSpeedDelta", "-1")
+          print(f"[CruiseButton] - pressed (init), error: {e}")
       return True
 
     return False
