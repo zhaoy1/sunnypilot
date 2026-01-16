@@ -67,7 +67,17 @@ class CruiseButton(Widget):
 
     return False
 
+  def _update_button_rects(self, rect: rl.Rectangle) -> None:
+    """Update button rectangles based on the render rect"""
+    self._plus_rect.x = rect.x + 50
+    self._plus_rect.y = rect.y + 300
+    self._minus_rect.x = rect.x + 50
+    self._minus_rect.y = rect.y + 570
+
   def _render(self, rect: rl.Rectangle) -> None:
+    # Update button rectangles based on current rect
+    self._update_button_rects(rect)
+
     # White text color, fully opaque
     self._white_color.a = 255
     font = gui_app.font()
