@@ -123,6 +123,14 @@ class HudRenderer(Widget):
     button_y = rect.y + UI_CONFIG.border_size
     self._exp_button.render(rl.Rectangle(button_x, button_y, UI_CONFIG.button_size, UI_CONFIG.button_size))
 
+    # TEST: Draw simple text directly to see if it shows up
+    test_x = rect.x + 50
+    test_y = rect.y + 50
+    rl.draw_text_ex(self._font_bold, "+", rl.Vector2(test_x, test_y), 240, 0, COLORS.white)
+
+    test_y2 = rect.y + 350
+    rl.draw_text_ex(self._font_bold, "-", rl.Vector2(test_x, test_y2), 240, 0, COLORS.white)
+
     # Render cruise speed button at fixed position (50, 300)
     self._cruise_button.render(rect)
 
