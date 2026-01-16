@@ -1,3 +1,4 @@
+import time
 import pyray as rl
 from openpilot.common.params import Params
 from openpilot.selfdrive.ui.ui_state import ui_state
@@ -12,6 +13,7 @@ class CruiseButton(Widget):
     self._params = Params()
     self._is_cruise_set: bool = False
     self._engageable: bool = False
+    self._last_debug_time: float = 0.0
 
     self._white_color: rl.Color = rl.Color(255, 255, 255, 255)
     self._plus_rect = rl.Rectangle(50, 300, 250, 250)  # "+" button position
@@ -92,13 +94,11 @@ class CruiseButton(Widget):
     self._white_color.a = 255
     font = gui_app.font()
 
-    # DEBUG: Print button positions every 60 frames (once per second at 60fps)
-    import time
-    if not hasattr(self, '_last_debug_time'):
-      self._last_debug_time = 0
-    if time.time() - self._last_debug_time > 5:
+    # DEBUG: Print button positions every 5 seconds
+    current_time = time.time()
+    if current_time - self._last_debug_time > 5:
       print(f"[CruiseButton] Buttons rendered at: +({self._plus_rect.x},{self._plus_rect.y}) -({self._minus_rect.x},{self._minus_rect.y})")
-      self._last_debug_time = time.time()
+      self._last_debug_time = current_time
 
     # Draw "+" button
     plus_center_x = int(self._plus_rect.x + self._plus_rect.width // 2)
