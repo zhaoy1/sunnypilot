@@ -39,8 +39,13 @@ class CruiseButton(Widget):
 
     mouse_pos = rl.get_mouse_position()
 
+    # DEBUG: Log mouse position when button is pressed
+    if rl.is_mouse_button_pressed(rl.MouseButton.MOUSE_BUTTON_LEFT):
+      print(f"[CruiseButton] Mouse pressed at: ({mouse_pos.x}, {mouse_pos.y})")
+
     # Check "+" button
     if rl.check_collision_point_rec(mouse_pos, self._plus_rect):
+      print(f"[CruiseButton] Mouse over + button")
       if rl.is_mouse_button_released(rl.MouseButton.MOUSE_BUTTON_LEFT):
         # Increment cruise speed delta
         try:
@@ -56,6 +61,7 @@ class CruiseButton(Widget):
 
     # Check "-" button
     if rl.check_collision_point_rec(mouse_pos, self._minus_rect):
+      print(f"[CruiseButton] Mouse over - button")
       if rl.is_mouse_button_released(rl.MouseButton.MOUSE_BUTTON_LEFT):
         # Decrement cruise speed delta
         try:
@@ -85,6 +91,14 @@ class CruiseButton(Widget):
     # White text color, fully opaque
     self._white_color.a = 255
     font = gui_app.font()
+
+    # DEBUG: Print button positions every 60 frames (once per second at 60fps)
+    import time
+    if not hasattr(self, '_last_debug_time'):
+      self._last_debug_time = 0
+    if time.time() - self._last_debug_time > 5:
+      print(f"[CruiseButton] Buttons rendered at: +({self._plus_rect.x},{self._plus_rect.y}) -({self._minus_rect.x},{self._minus_rect.y})")
+      self._last_debug_time = time.time()
 
     # Draw "+" button
     plus_center_x = int(self._plus_rect.x + self._plus_rect.width // 2)
