@@ -57,9 +57,7 @@ class VCruiseHelper(VCruiseHelperSP):
     try:
       with open("/data/params/d/CruiseSpeedMode", 'r') as f:
         self.cruise_speed_mode = int(f.read().strip())
-        print(f"[CRUISE] Read mode from file: {self.cruise_speed_mode}")
     except (FileNotFoundError, ValueError) as e:
-      print(f"[CRUISE] Failed to read mode file: {e}, defaulting to 0")
       self.cruise_speed_mode = 0
 
   def calculate_cruise_speed_from_limit(self, speed_limit_kph: float) -> float:
@@ -107,7 +105,6 @@ class VCruiseHelper(VCruiseHelperSP):
           if self.cruise_min_kph <= current_speed_kph <= self.cruise_max_kph:
             if current_speed_kph > self.v_cruise_kph:
               self.v_cruise_kph = int(round(current_speed_kph))
-              print(f"[CRUISE] Gas pressed while cruising, updating cruise speed to: {self.v_cruise_kph} kph")
 
         self.v_cruise_cluster_kph = self.v_cruise_kph
         self.update_button_timers(CS, enabled)
@@ -201,35 +198,36 @@ class VCruiseHelper(VCruiseHelperSP):
     initial_experimental_mode = experimental_mode and not dynamic_experimental_control
     initial = V_CRUISE_INITIAL_EXPERIMENTAL_MODE if initial_experimental_mode else V_CRUISE_INITIAL
 
-    print(f"[CRUISE] initialize_v_cruise called - Mode: {self.cruise_speed_mode}, Speed limit: {self.speed_limit_kph:.1f} kph")
-    print(f"[CRUISE] CS.vEgo: {CS.vEgo * CV.MS_TO_KPH:.1f} kph, v_cruise_initialized: {self.v_cruise_initialized}")
+    # Get cluster speed (from vehicle's instrument cluster)
+    cluster_speed_kph = CS.cruiseState.speed * CV.MS_TO_KPH if CS.cruiseState.speed > 0 else 0
 
     if any(b.type in (ButtonType.accelCruise, ButtonType.resumeCruise) for b in CS.buttonEvents) and self.v_cruise_initialized:
       self.v_cruise_kph = self.v_cruise_kph_last
-      print(f"[CRUISE] Resume button pressed, using last cruise speed: {self.v_cruise_kph} kph")
+      print(f"[CRUISE] Resume: {self.v_cruise_kph} kph")
     else:
       # Get current vehicle speed
       current_speed_kph = CS.vEgo * CV.MS_TO_KPH
 
       # Calculate speed from limit based on mode
       speed_from_limit = self.calculate_cruise_speed_from_limit(self.speed_limit_kph)
-      print(f"[CRUISE] Current speed: {current_speed_kph:.1f} kph, Speed from limit: {speed_from_limit:.1f} kph")
 
-      if speed_from_limit > 0 and self.cruise_speed_mode > 0:
+      if self.cruise_speed_mode == 0:
+        # Mode 0: Use cluster speed (vehicle's instrument cluster)
+        cruise_speed_kph = max(cluster_speed_kph, initial) if cluster_speed_kph > 0 else max(current_speed_kph, initial)
+        print(f"[CRUISE] Mode 0 (Cluster): {cruise_speed_kph:.1f} kph")
+      elif speed_from_limit > 0:
+        # Modes 1-3: Use speed limit with offset
         # Rivian-specific: Choose max between current speed and speed limit (with offset)
         # This allows driver to go faster than speed limit if they want
         cruise_speed_kph = max(current_speed_kph, speed_from_limit)
-        print(f"[CRUISE] Using max of current speed and speed limit: {cruise_speed_kph:.1f} kph")
+        print(f"[CRUISE] Mode {self.cruise_speed_mode} (Limit): {speed_from_limit:.1f} kph → {cruise_speed_kph:.1f} kph")
       else:
-        # Use current speed (default behavior - mode 0)
-        cruise_speed_kph = max(current_speed_kph, initial)
-        print(f"[CRUISE] Using current speed: {cruise_speed_kph:.1f} kph")
+        # Modes 1-3 but no speed limit data available: Fall back to cluster speed
+        cruise_speed_kph = max(cluster_speed_kph, initial) if cluster_speed_kph > 0 else max(current_speed_kph, initial)
+        print(f"[CRUISE] Mode {self.cruise_speed_mode} (No limit, fallback): {cruise_speed_kph:.1f} kph")
 
       # Rivian-specific: Apply min/max limits (20 mph to 85 mph)
       cruise_speed_kph = np.clip(cruise_speed_kph, self.cruise_min_kph, self.cruise_max_kph)
       self.v_cruise_kph = int(round(cruise_speed_kph))
 
-      print(f"[CRUISE] After applying limits ({self.cruise_min_kph:.1f}-{self.cruise_max_kph:.1f} kph): {self.v_cruise_kph} kph")
-
     self.v_cruise_cluster_kph = self.v_cruise_kph
-    print(f"[CRUISE] Final cruise speed set to: {self.v_cruise_kph} kph")

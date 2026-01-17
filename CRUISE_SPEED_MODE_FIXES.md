@@ -1,124 +1,78 @@
-# Cruise Speed Mode - Review Fixes
+# Cruise Speed Mode - Fallback Logic Fix
 
-## Issues Addressed
+## Issue
+When speed limit data is not available, the system needs to fall back to cluster speed instead of current vehicle speed.
 
-### Issue 1: CruiseSpeedMode param is only read once
-**Problem**: Mode was only read in `__init__()`, so changing the setting in UI wouldn't take effect until restart.
+## Solution
 
-**Fix**: Added `self.read_cruise_speed_mode()` call at the start of `initialize_v_cruise()`.
+### Fallback Logic (in `selfdrive/car/cruise.py`)
 
-**File**: `selfdrive/car/cruise.py`
-```python
-def initialize_v_cruise(self, CS, experimental_mode: bool, dynamic_experimental_control: bool) -> None:
-    # initializing is handled by the PCM
-    if self.CP.pcmCruise:
-      return
+The `initialize_v_cruise()` method now implements proper fallback logic:
 
-    # Re-read cruise speed mode to pick up any changes from Settings UI
-    self.read_cruise_speed_mode()  # <-- NEW: Read mode on every cruise engagement
+1. **Mode 0 (Cluster Speed)**:
+   - Primary: Use cluster speed from `CS.cruiseState.speed`
+   - Fallback: If cluster speed is 0, use current vehicle speed `CS.vEgo`
 
-    # ... rest of method
+2. **Modes 1-3 (Speed Limit Based)**:
+   - Primary: Use speed limit with offset (10%, 20%)
+   - Fallback: If no speed limit data (`speed_from_limit <= 0`), use cluster speed
+   - Final fallback: If cluster speed is also 0, use current vehicle speed
+
+### Speed Sources
+
+1. **Cluster Speed**: `CS.cruiseState.speed`
+   - Comes from vehicle's instrument cluster
+   - Set in `carstate.py` from `cp_adas.vl["Cluster"]["Cluster_VehicleSpeed"]`
+   - Converted to m/s based on cluster units (kph or mph)
+   - Represents the speed the driver sees on their dashboard
+
+2. **Current Vehicle Speed**: `CS.vEgo`
+   - Actual vehicle speed from ESP/wheel sensors
+   - May differ slightly from cluster speed
+   - Used as final fallback when cluster speed is unavailable
+
+3. **Speed Limit**: `self.speed_limit_kph`
+   - Comes from map data via `liveMapDataSP`
+   - Updated in `card.py` when valid speed limit data is available
+   - Only used in modes 1-3
+
+### Rivian-Specific Features
+
+All modes respect Rivian's cruise speed limits:
+- Minimum: 20 mph (32.2 kph)
+- Maximum: 85 mph (136.8 kph)
+
+For modes 1-3, the system uses `max(current_speed, speed_limit_with_offset)` to allow the driver to go faster than the speed limit if desired.
+
+## Code Flow
+
+```
+initialize_v_cruise() called when cruise is engaged
+  ↓
+Read cruise_speed_mode from file
+  ↓
+Get cluster_speed from CS.cruiseState.speed
+  ↓
+Mode 0: Use cluster_speed (or current_speed if cluster unavailable)
+Mode 1-3 with speed limit: Use max(current_speed, speed_limit_with_offset)
+Mode 1-3 without speed limit: Fall back to cluster_speed (or current_speed)
+  ↓
+Apply Rivian limits (20-85 mph)
+  ↓
+Set v_cruise_kph
 ```
 
-**Result**: Mode is now re-read every time cruise is engaged, so Settings changes take effect immediately.
+## Testing
 
----
+To verify the fallback logic works:
 
-### Issue 2: Speed limit validity check should be stricter
-**Problem**: Code checked `speedLimitValid` but not `speedLimit > 0`, could accept zero or stale values.
+1. **Test Mode 0**: Should always use cluster speed
+2. **Test Modes 1-3 with speed limit**: Should use speed limit with offset
+3. **Test Modes 1-3 without speed limit**: Should fall back to cluster speed
+4. **Test with no cluster data**: Should fall back to current vehicle speed
 
-**Fix**: Added explicit check for `speed_limit_ms > 0` before calling `update_speed_limit()`.
+## Related Files
 
-**File**: `selfdrive/car/card.py`
-```python
-# Update speed limit from roadLimitSpeed for cruise speed mode
-# Speed limits come from map data in m/s and are converted to kph for internal use,
-# independent of UI metric/imperial display units
-if self.sm.valid['roadLimitSpeed'] and self.sm['roadLimitSpeed'].speedLimitValid:
-  speed_limit_ms = self.sm['roadLimitSpeed'].speedLimit
-  if speed_limit_ms > 0:  # <-- NEW: Ensure we have a valid positive speed limit
-    self.v_cruise_helper.update_speed_limit(speed_limit_ms)
-```
-
-**Result**: Only positive, non-zero speed limits are accepted, preventing incorrect cruise initialization.
-
----
-
-### Issue 3: Unit handling is correct but fragile
-**Problem**: Unit conversion was correct but lacked documentation, risking future regressions.
-
-**Fix**: Added comprehensive docstring to `update_speed_limit()` method explaining unit handling.
-
-**File**: `selfdrive/car/cruise.py`
-```python
-def update_speed_limit(self, speed_limit_ms: float):
-  """Update speed limit from roadLimitSpeed.
-
-  Speed limits from roadLimitSpeed are always in m/s (from map data).
-  We convert once to kph for internal cruise calculations.
-  This is independent of UI metric/imperial display units.
-  """
-  self.speed_limit_kph = speed_limit_ms * CV.MS_TO_KPH if speed_limit_ms > 0 else 0.0
-```
-
-**Also added comment in card.py**:
-```python
-# Speed limits come from map data in m/s and are converted to kph for internal use,
-# independent of UI metric/imperial display units
-```
-
-**Result**: Clear documentation prevents future confusion about unit handling and metric/imperial independence.
-
----
-
-## Summary of Changes
-
-| File | Change | Lines Modified |
-|------|--------|----------------|
-| `selfdrive/car/cruise.py` | Added `read_cruise_speed_mode()` call in `initialize_v_cruise()` | +3 |
-| `selfdrive/car/cruise.py` | Enhanced docstring for `update_speed_limit()` | +5 |
-| `selfdrive/car/card.py` | Added `speed_limit_ms > 0` check | +3 |
-| `selfdrive/car/card.py` | Added clarifying comment about units | +2 |
-
-**Total**: 13 lines added/modified
-
----
-
-## Testing Recommendations
-
-### Test 1: Mode changes without restart
-1. Set mode to "Current Speed" in Settings
-2. Enable cruise - verify it uses current speed
-3. Disable cruise
-4. Change mode to "Speed Limit" in Settings (without restarting)
-5. Enable cruise again - verify it now uses speed limit
-6. **Expected**: Mode change takes effect immediately
-
-### Test 2: Zero speed limit handling
-1. Set mode to "Speed Limit"
-2. Drive in area with no speed limit data (speedLimit = 0)
-3. Enable cruise
-4. **Expected**: Falls back to current speed (doesn't set cruise to 0)
-
-### Test 3: Stale speed limit handling
-1. Set mode to "Speed Limit + 10%"
-2. Drive from 65 mph zone to area with no speed limit
-3. Enable cruise
-4. **Expected**: Uses current speed, not stale 65 mph value
-
-### Test 4: Unit consistency
-1. Test in both metric (Canada) and imperial (US) regions
-2. Verify speed limit detection works correctly in both
-3. Verify cruise speed calculations are correct regardless of UI units
-4. **Expected**: Speed limit from maps (m/s) → internal (kph) → display (kph or mph) works correctly
-
----
-
-## Code Quality Improvements
-
-1. **Robustness**: Mode is always fresh when cruise engages
-2. **Safety**: Invalid speed limits (≤0) are rejected
-3. **Maintainability**: Clear documentation prevents future bugs
-4. **User Experience**: Settings changes take effect immediately without restart
-
-All three issues have been addressed with minimal code changes and maximum clarity.
+- `selfdrive/car/cruise.py`: Cruise speed calculation logic
+- `selfdrive/car/card.py`: Speed limit subscription and updates
+- `opendbc_repo/opendbc/car/rivian/carstate.py`: Cluster speed source
