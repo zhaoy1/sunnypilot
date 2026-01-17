@@ -26,10 +26,9 @@ class CruiseSpeedModeButton(Widget):
   def __init__(self):
     super().__init__()
     self._params = Params()
-    # Read mode - get() returns int directly for INT type params
-    self._mode = self._params.get("CruiseSpeedMode")
-    if self._mode is None:
-      self._mode = 0
+    # Read mode from file since CruiseSpeedMode param requires recompiling params_pyx.so
+    self._mode_file = "/data/params/d/CruiseSpeedMode"
+    self._mode = self._read_mode_from_file()
     self._dialog = None
     self._button = Button(
       lambda: f"Cruise Speed Mode: {self.MODE_NAMES[self._mode]}",
@@ -38,6 +37,22 @@ class CruiseSpeedModeButton(Widget):
       text_alignment=rl.GuiTextAlignment.TEXT_ALIGN_LEFT,
       text_padding=50
     )
+
+  def _read_mode_from_file(self):
+    """Read cruise speed mode from file"""
+    try:
+      with open(self._mode_file, 'r') as f:
+        return int(f.read().strip())
+    except (FileNotFoundError, ValueError):
+      return 0
+
+  def _write_mode_to_file(self, mode):
+    """Write cruise speed mode to file"""
+    try:
+      with open(self._mode_file, 'w') as f:
+        f.write(str(mode))
+    except Exception:
+      pass
 
   def _show_dialog(self):
     """Show selection dialog"""
@@ -54,7 +69,7 @@ class CruiseSpeedModeButton(Widget):
       if result == DialogResult.CONFIRM:
         # Save selection
         new_mode = self.MODE_NAMES.index(self._dialog.selection)
-        self._params.put("CruiseSpeedMode", new_mode)
+        self._write_mode_to_file(new_mode)
         self._mode = new_mode
         self._dialog = None
       elif result == DialogResult.CANCEL:
