@@ -39,9 +39,45 @@ class VCruiseHelper(VCruiseHelperSP):
     self.button_timers = {ButtonType.decelCruise: 0, ButtonType.accelCruise: 0}
     self.button_change_states = {btn: {"standstill": False, "enabled": False} for btn in self.button_timers}
 
+    # Speed limit based cruise mode
+    self.cruise_speed_mode = 0  # 0=current speed, 1=speed limit, 2=speed limit+10%, 3=speed limit+20%
+    self.speed_limit_kph = 0.0
+    self.read_cruise_speed_mode()
+
   @property
   def v_cruise_initialized(self):
     return self.v_cruise_kph != V_CRUISE_UNSET
+
+  def read_cruise_speed_mode(self):
+    """Read cruise speed mode from params"""
+    from openpilot.common.params import Params
+    params = Params()
+    self.cruise_speed_mode = params.get_int("CruiseSpeedMode")
+
+  def calculate_cruise_speed_from_limit(self, speed_limit_kph: float) -> float:
+    """Calculate cruise speed based on speed limit and mode"""
+    if speed_limit_kph <= 0:
+      return 0.0
+
+    if self.cruise_speed_mode == 0:  # Current speed mode
+      return 0.0  # Don't use speed limit
+    elif self.cruise_speed_mode == 1:  # Speed limit
+      return speed_limit_kph
+    elif self.cruise_speed_mode == 2:  # Speed limit + 10%
+      return speed_limit_kph * 1.10
+    elif self.cruise_speed_mode == 3:  # Speed limit + 20%
+      return speed_limit_kph * 1.20
+    else:
+      return 0.0
+
+  def update_speed_limit(self, speed_limit_ms: float):
+    """Update speed limit from roadLimitSpeed.
+
+    Speed limits from roadLimitSpeed are always in m/s (from map data).
+    We convert once to kph for internal cruise calculations.
+    This is independent of UI metric/imperial display units.
+    """
+    self.speed_limit_kph = speed_limit_ms * CV.MS_TO_KPH if speed_limit_ms > 0 else 0.0
 
   def update_v_cruise(self, CS, enabled, is_metric):
     self.v_cruise_kph_last = self.v_cruise_kph
@@ -140,12 +176,23 @@ class VCruiseHelper(VCruiseHelperSP):
     if self.CP.pcmCruise:
       return
 
+    # Re-read cruise speed mode to pick up any changes from Settings UI
+    self.read_cruise_speed_mode()
+
     initial_experimental_mode = experimental_mode and not dynamic_experimental_control
     initial = V_CRUISE_INITIAL_EXPERIMENTAL_MODE if initial_experimental_mode else V_CRUISE_INITIAL
 
     if any(b.type in (ButtonType.accelCruise, ButtonType.resumeCruise) for b in CS.buttonEvents) and self.v_cruise_initialized:
       self.v_cruise_kph = self.v_cruise_kph_last
     else:
-      self.v_cruise_kph = int(round(np.clip(CS.vEgo * CV.MS_TO_KPH, initial, V_CRUISE_MAX)))
+      # Check if we should use speed limit based cruise
+      speed_from_limit = self.calculate_cruise_speed_from_limit(self.speed_limit_kph)
+
+      if speed_from_limit > 0 and self.cruise_speed_mode > 0:
+        # Use speed limit based cruise speed
+        self.v_cruise_kph = int(round(np.clip(speed_from_limit, self.v_cruise_min, V_CRUISE_MAX)))
+      else:
+        # Use current speed (default behavior)
+        self.v_cruise_kph = int(round(np.clip(CS.vEgo * CV.MS_TO_KPH, initial, V_CRUISE_MAX)))
 
     self.v_cruise_cluster_kph = self.v_cruise_kph

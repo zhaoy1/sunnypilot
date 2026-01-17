@@ -149,6 +149,7 @@ inline static std::unordered_map<std::string, ParamKeyAttributes> keys = {
     {"CustomAccIncrementsEnabled", {PERSISTENT | BACKUP, BOOL, "0"}},
     {"CustomAccLongPressIncrement", {PERSISTENT | BACKUP, INT, "5"}},
     {"CustomAccShortPressIncrement", {PERSISTENT | BACKUP, INT, "1"}},
+    {"CruiseSpeedMode", {PERSISTENT | BACKUP, INT, "0"}},  // 0=current speed, 1=speed limit, 2=speed limit+10%, 3=speed limit+20%
     {"DeviceBootMode", {PERSISTENT | BACKUP, INT, "0"}},
     {"DevUIInfo", {PERSISTENT | BACKUP, INT, "0"}},
     {"EnableCopyparty", {PERSISTENT | BACKUP, BOOL}},
