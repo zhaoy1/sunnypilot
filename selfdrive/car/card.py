@@ -219,7 +219,7 @@ class Car:
 
     self.v_cruise_helper.update_speed_limit_assist(self.is_metric, self.sm['longitudinalPlanSP'])
 
-    # Update speed limit from liveMapDataSP for cruise speed mode
+    # Update speed limit from liveMapDataSP for cruise speed mode and UI display
     # Speed limits come from map data in m/s and are converted to kph for internal use,
     # independent of UI metric/imperial display units
     if self.sm.valid['liveMapDataSP'] and self.sm['liveMapDataSP'].speedLimitValid:
@@ -227,13 +227,17 @@ class Car:
       if speed_limit_ms > 0:  # Ensure we have a valid positive speed limit
         print(f"[CARD] Speed limit from liveMapDataSP: {speed_limit_ms} m/s ({speed_limit_ms * 3.6:.1f} kph)")
         self.v_cruise_helper.update_speed_limit(speed_limit_ms)
+        # Update CarStateSP with speed limit for UI display (in m/s)
+        CS_SP.speedLimit = speed_limit_ms
       else:
         print(f"[CARD] Speed limit is zero or negative: {speed_limit_ms}")
+        CS_SP.speedLimit = 0.0
     else:
       if not self.sm.valid['liveMapDataSP']:
         print("[CARD] liveMapDataSP not valid")
       elif not self.sm['liveMapDataSP'].speedLimitValid:
         print("[CARD] speedLimitValid is False")
+      CS_SP.speedLimit = 0.0
 
     self.v_cruise_helper.update_v_cruise(CS, self.sm['carControl'].enabled, self.is_metric)
     if self.sm['carControl'].enabled and not self.CC_prev.enabled:

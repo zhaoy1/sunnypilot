@@ -54,6 +54,8 @@ class CarState(CarStateBase): #, CarStateExt):
 
     # Track cluster speed for cruise control
     # For openpilot longitudinal control, this provides a baseline that cruise.py can override
+    # NOTE: This speed is only used as a fallback. The actual cruise speed is managed by
+    # VCruiseHelper in cruise.py, which can use speed limit based modes.
     if not ret.cruiseState.enabled:
       cluster_speed = int(cp_adas.vl["Cluster"]["Cluster_VehicleSpeed"])
       self.last_speed = cluster_speed
@@ -61,6 +63,8 @@ class CarState(CarStateBase): #, CarStateExt):
       cluster_speed = cp_adas.vl["Cluster"]["Cluster_VehicleSpeed"]
       self.last_speed = max(cluster_speed, self.last_speed)
 
+    # Set a baseline cruise speed from cluster
+    # This will be overridden by cruise.py's VCruiseHelper when cruise is engaged
     ret.cruiseState.speed = max(
       20 * CV.MPH_TO_MS,
       min(self.last_speed * conversion, 85 * CV.MPH_TO_MS)

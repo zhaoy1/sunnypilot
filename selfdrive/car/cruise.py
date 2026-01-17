@@ -186,13 +186,17 @@ class VCruiseHelper(VCruiseHelperSP):
     initial_experimental_mode = experimental_mode and not dynamic_experimental_control
     initial = V_CRUISE_INITIAL_EXPERIMENTAL_MODE if initial_experimental_mode else V_CRUISE_INITIAL
 
+    print(f"[CRUISE] initialize_v_cruise called - Mode: {self.cruise_speed_mode}, Speed limit: {self.speed_limit_kph:.1f} kph")
+    print(f"[CRUISE] CS.vEgo: {CS.vEgo * CV.MS_TO_KPH:.1f} kph, v_cruise_initialized: {self.v_cruise_initialized}")
+
     if any(b.type in (ButtonType.accelCruise, ButtonType.resumeCruise) for b in CS.buttonEvents) and self.v_cruise_initialized:
       self.v_cruise_kph = self.v_cruise_kph_last
+      print(f"[CRUISE] Resume button pressed, using last cruise speed: {self.v_cruise_kph} kph")
     else:
       # Check if we should use speed limit based cruise
       speed_from_limit = self.calculate_cruise_speed_from_limit(self.speed_limit_kph)
 
-      print(f"[CRUISE] Mode: {self.cruise_speed_mode}, Speed limit: {self.speed_limit_kph} kph, Calculated: {speed_from_limit} kph")
+      print(f"[CRUISE] Calculated speed from limit: {speed_from_limit:.1f} kph")
 
       if speed_from_limit > 0 and self.cruise_speed_mode > 0:
         # Use speed limit based cruise speed
@@ -204,3 +208,4 @@ class VCruiseHelper(VCruiseHelperSP):
         print(f"[CRUISE] Using current speed: {self.v_cruise_kph} kph (vEgo: {CS.vEgo * CV.MS_TO_KPH:.1f} kph)")
 
     self.v_cruise_cluster_kph = self.v_cruise_kph
+    print(f"[CRUISE] Final cruise speed set to: {self.v_cruise_kph} kph")
