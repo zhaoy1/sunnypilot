@@ -52,20 +52,25 @@ class CarState(CarStateBase): #, CarStateExt):
     # Cruise state
     ret.cruiseState.enabled = cp_cam.vl["ACM_Status"]["ACM_FeatureStatus"] == 1
 
-    if not ret.cruiseState.enabled:
-      cluster_speed = int(cp_adas.vl["Cluster"]["Cluster_VehicleSpeed"])
-      self.last_speed = cluster_speed
-    elif ret.gasPressed:
-      cluster_speed = cp_adas.vl["Cluster"]["Cluster_VehicleSpeed"]
-      self.last_speed = max(cluster_speed, self.last_speed)
-
-    ret.cruiseState.speed = max(
-      20 * CV.MPH_TO_MS,
-      min(self.last_speed * conversion, 85 * CV.MPH_TO_MS)
-    )
-
+    # For openpilot longitudinal control, cruise speed is managed by cruise.py
+    # Only track cluster speed for non-openpilot longitudinal control
     if not self.CP.openpilotLongitudinalControl:
+      if not ret.cruiseState.enabled:
+        cluster_speed = int(cp_adas.vl["Cluster"]["Cluster_VehicleSpeed"])
+        self.last_speed = cluster_speed
+      elif ret.gasPressed:
+        cluster_speed = cp_adas.vl["Cluster"]["Cluster_VehicleSpeed"]
+        self.last_speed = max(cluster_speed, self.last_speed)
+
+      ret.cruiseState.speed = max(
+        20 * CV.MPH_TO_MS,
+        min(self.last_speed * conversion, 85 * CV.MPH_TO_MS)
+      )
+    else:
+      # With openpilot longitudinal control, cruise speed is set by cruise.py
+      # Set to -1 to indicate it's not available from the car
       ret.cruiseState.speed = -1
+
     ret.cruiseState.available = True  # cp.vl["VDM_AdasSts"]["VDM_AdasInterfaceStatus"] == 1
     ret.cruiseState.standstill = cp.vl["VDM_AdasSts"]["VDM_AdasVehicleHoldStatus"] == 1
 
