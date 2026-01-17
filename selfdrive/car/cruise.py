@@ -44,6 +44,10 @@ class VCruiseHelper(VCruiseHelperSP):
     self.speed_limit_kph = 0.0
     self.read_cruise_speed_mode()
 
+    # Rivian-specific cruise speed limits (in kph)
+    self.cruise_min_kph = 20 * CV.MPH_TO_KPH  # 20 mph minimum
+    self.cruise_max_kph = 85 * CV.MPH_TO_KPH  # 85 mph maximum
+
   @property
   def v_cruise_initialized(self):
     return self.v_cruise_kph != V_CRUISE_UNSET
@@ -94,6 +98,17 @@ class VCruiseHelper(VCruiseHelperSP):
         # if stock cruise is completely disabled, then we can use our own set speed logic
         self._update_v_cruise_non_pcm(CS, _enabled, is_metric)
         self.update_speed_limit_assist_v_cruise_non_pcm()
+
+        # Rivian-specific: If cruise is enabled and gas pedal is pressed, update cruise speed
+        # to match current vehicle speed (allows driver to accelerate and set new cruise speed)
+        if _enabled and CS.gasPressed and CS.vEgo > 0:
+          current_speed_kph = CS.vEgo * CV.MS_TO_KPH
+          # Only update if new speed is within limits and higher than current cruise speed
+          if self.cruise_min_kph <= current_speed_kph <= self.cruise_max_kph:
+            if current_speed_kph > self.v_cruise_kph:
+              self.v_cruise_kph = int(round(current_speed_kph))
+              print(f"[CRUISE] Gas pressed while cruising, updating cruise speed to: {self.v_cruise_kph} kph")
+
         self.v_cruise_cluster_kph = self.v_cruise_kph
         self.update_button_timers(CS, enabled)
       else:
@@ -193,19 +208,28 @@ class VCruiseHelper(VCruiseHelperSP):
       self.v_cruise_kph = self.v_cruise_kph_last
       print(f"[CRUISE] Resume button pressed, using last cruise speed: {self.v_cruise_kph} kph")
     else:
-      # Check if we should use speed limit based cruise
-      speed_from_limit = self.calculate_cruise_speed_from_limit(self.speed_limit_kph)
+      # Get current vehicle speed
+      current_speed_kph = CS.vEgo * CV.MS_TO_KPH
 
-      print(f"[CRUISE] Calculated speed from limit: {speed_from_limit:.1f} kph")
+      # Calculate speed from limit based on mode
+      speed_from_limit = self.calculate_cruise_speed_from_limit(self.speed_limit_kph)
+      print(f"[CRUISE] Current speed: {current_speed_kph:.1f} kph, Speed from limit: {speed_from_limit:.1f} kph")
 
       if speed_from_limit > 0 and self.cruise_speed_mode > 0:
-        # Use speed limit based cruise speed
-        self.v_cruise_kph = int(round(np.clip(speed_from_limit, self.v_cruise_min, V_CRUISE_MAX)))
-        print(f"[CRUISE] Using speed limit based cruise: {self.v_cruise_kph} kph")
+        # Rivian-specific: Choose max between current speed and speed limit (with offset)
+        # This allows driver to go faster than speed limit if they want
+        cruise_speed_kph = max(current_speed_kph, speed_from_limit)
+        print(f"[CRUISE] Using max of current speed and speed limit: {cruise_speed_kph:.1f} kph")
       else:
-        # Use current speed (default behavior)
-        self.v_cruise_kph = int(round(np.clip(CS.vEgo * CV.MS_TO_KPH, initial, V_CRUISE_MAX)))
-        print(f"[CRUISE] Using current speed: {self.v_cruise_kph} kph (vEgo: {CS.vEgo * CV.MS_TO_KPH:.1f} kph)")
+        # Use current speed (default behavior - mode 0)
+        cruise_speed_kph = max(current_speed_kph, initial)
+        print(f"[CRUISE] Using current speed: {cruise_speed_kph:.1f} kph")
+
+      # Rivian-specific: Apply min/max limits (20 mph to 85 mph)
+      cruise_speed_kph = np.clip(cruise_speed_kph, self.cruise_min_kph, self.cruise_max_kph)
+      self.v_cruise_kph = int(round(cruise_speed_kph))
+
+      print(f"[CRUISE] After applying limits ({self.cruise_min_kph:.1f}-{self.cruise_max_kph:.1f} kph): {self.v_cruise_kph} kph")
 
     self.v_cruise_cluster_kph = self.v_cruise_kph
     print(f"[CRUISE] Final cruise speed set to: {self.v_cruise_kph} kph")
