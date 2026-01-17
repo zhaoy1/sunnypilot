@@ -71,7 +71,7 @@ class Car:
 
   def __init__(self, CI=None, RI=None) -> None:
     self.can_sock = messaging.sub_sock('can', timeout=20)
-    self.sm = messaging.SubMaster(['pandaStates', 'carControl', 'onroadEvents', 'roadLimitSpeed'] + ['carControlSP', 'longitudinalPlanSP'])
+    self.sm = messaging.SubMaster(['pandaStates', 'carControl', 'onroadEvents', 'liveMapDataSP'] + ['carControlSP', 'longitudinalPlanSP'])
     self.pm = messaging.PubMaster(['sendcan', 'carState', 'carParams', 'carOutput', 'liveTracks'] + ['carParamsSP', 'carStateSP'])
 
     self.can_rcv_cum_timeout_counter = 0
@@ -219,11 +219,11 @@ class Car:
 
     self.v_cruise_helper.update_speed_limit_assist(self.is_metric, self.sm['longitudinalPlanSP'])
 
-    # Update speed limit from roadLimitSpeed for cruise speed mode
+    # Update speed limit from liveMapDataSP for cruise speed mode
     # Speed limits come from map data in m/s and are converted to kph for internal use,
     # independent of UI metric/imperial display units
-    if self.sm.valid['roadLimitSpeed'] and self.sm['roadLimitSpeed'].speedLimitValid:
-      speed_limit_ms = self.sm['roadLimitSpeed'].speedLimit
+    if self.sm.valid['liveMapDataSP'] and self.sm['liveMapDataSP'].speedLimitValid:
+      speed_limit_ms = self.sm['liveMapDataSP'].speedLimit
       if speed_limit_ms > 0:  # Ensure we have a valid positive speed limit
         self.v_cruise_helper.update_speed_limit(speed_limit_ms)
 
