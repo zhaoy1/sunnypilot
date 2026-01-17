@@ -26,9 +26,10 @@ class CruiseSpeedModeButton(Widget):
   def __init__(self):
     super().__init__()
     self._params = Params()
-    # Read mode using get() and convert to int, default to 0
-    mode_str = self._params.get("CruiseSpeedMode", encoding='utf-8')
-    self._mode = int(mode_str) if mode_str else 0
+    # Read mode - get() returns int directly for INT type params
+    self._mode = self._params.get("CruiseSpeedMode")
+    if self._mode is None:
+      self._mode = 0
     self._dialog = None
     self._button = Button(
       lambda: f"Cruise Speed Mode: {self.MODE_NAMES[self._mode]}",
@@ -53,7 +54,7 @@ class CruiseSpeedModeButton(Widget):
       if result == DialogResult.CONFIRM:
         # Save selection
         new_mode = self.MODE_NAMES.index(self._dialog.selection)
-        self._params.put("CruiseSpeedMode", str(new_mode))
+        self._params.put("CruiseSpeedMode", new_mode)
         self._mode = new_mode
         self._dialog = None
       elif result == DialogResult.CANCEL:

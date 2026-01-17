@@ -52,11 +52,8 @@ class VCruiseHelper(VCruiseHelperSP):
     """Read cruise speed mode from params"""
     from openpilot.common.params import Params
     params = Params()
-    try:
-      mode_str = params.get("CruiseSpeedMode", encoding='utf-8')
-      self.cruise_speed_mode = int(mode_str) if mode_str else 0
-    except (ValueError, TypeError):
-      self.cruise_speed_mode = 0
+    mode = params.get("CruiseSpeedMode")
+    self.cruise_speed_mode = mode if mode is not None else 0
 
   def calculate_cruise_speed_from_limit(self, speed_limit_kph: float) -> float:
     """Calculate cruise speed based on speed limit and mode"""
