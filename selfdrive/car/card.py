@@ -225,7 +225,15 @@ class Car:
     if self.sm.valid['liveMapDataSP'] and self.sm['liveMapDataSP'].speedLimitValid:
       speed_limit_ms = self.sm['liveMapDataSP'].speedLimit
       if speed_limit_ms > 0:  # Ensure we have a valid positive speed limit
+        print(f"[CARD] Speed limit from liveMapDataSP: {speed_limit_ms} m/s ({speed_limit_ms * 3.6:.1f} kph)")
         self.v_cruise_helper.update_speed_limit(speed_limit_ms)
+      else:
+        print(f"[CARD] Speed limit is zero or negative: {speed_limit_ms}")
+    else:
+      if not self.sm.valid['liveMapDataSP']:
+        print("[CARD] liveMapDataSP not valid")
+      elif not self.sm['liveMapDataSP'].speedLimitValid:
+        print("[CARD] speedLimitValid is False")
 
     self.v_cruise_helper.update_v_cruise(CS, self.sm['carControl'].enabled, self.is_metric)
     if self.sm['carControl'].enabled and not self.CC_prev.enabled:

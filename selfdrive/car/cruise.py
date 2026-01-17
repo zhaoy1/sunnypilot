@@ -53,7 +53,9 @@ class VCruiseHelper(VCruiseHelperSP):
     try:
       with open("/data/params/d/CruiseSpeedMode", 'r') as f:
         self.cruise_speed_mode = int(f.read().strip())
-    except (FileNotFoundError, ValueError):
+        print(f"[CRUISE] Read mode from file: {self.cruise_speed_mode}")
+    except (FileNotFoundError, ValueError) as e:
+      print(f"[CRUISE] Failed to read mode file: {e}, defaulting to 0")
       self.cruise_speed_mode = 0
 
   def calculate_cruise_speed_from_limit(self, speed_limit_kph: float) -> float:
@@ -190,11 +192,15 @@ class VCruiseHelper(VCruiseHelperSP):
       # Check if we should use speed limit based cruise
       speed_from_limit = self.calculate_cruise_speed_from_limit(self.speed_limit_kph)
 
+      print(f"[CRUISE] Mode: {self.cruise_speed_mode}, Speed limit: {self.speed_limit_kph} kph, Calculated: {speed_from_limit} kph")
+
       if speed_from_limit > 0 and self.cruise_speed_mode > 0:
         # Use speed limit based cruise speed
         self.v_cruise_kph = int(round(np.clip(speed_from_limit, self.v_cruise_min, V_CRUISE_MAX)))
+        print(f"[CRUISE] Using speed limit based cruise: {self.v_cruise_kph} kph")
       else:
         # Use current speed (default behavior)
         self.v_cruise_kph = int(round(np.clip(CS.vEgo * CV.MS_TO_KPH, initial, V_CRUISE_MAX)))
+        print(f"[CRUISE] Using current speed: {self.v_cruise_kph} kph (vEgo: {CS.vEgo * CV.MS_TO_KPH:.1f} kph)")
 
     self.v_cruise_cluster_kph = self.v_cruise_kph
