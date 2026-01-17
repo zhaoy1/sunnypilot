@@ -29,7 +29,7 @@ class CruiseLayout(Widget):
       description="Select how cruise speed is set when engaging cruise control",
       buttons=["Current Speed", "Speed Limit", "Speed Limit + 10%", "Speed Limit + 20%"],
       selected_index=current_mode,
-      button_width=200,
+      button_width=250,  # Increased from 200 to prevent text overlap
       callback=self._set_cruise_speed_mode,
       icon="speed_limit.png"
     )
