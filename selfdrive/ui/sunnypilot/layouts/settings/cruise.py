@@ -30,13 +30,6 @@ class CruiseSpeedModeButton(Widget):
     self._mode_file = "/data/params/d/CruiseSpeedMode"
     self._mode = self._read_mode_from_file()
     self._dialog = None
-    self._button = Button(
-      lambda: f"Cruise Speed Mode: {self.MODE_NAMES[self._mode]}",
-      click_callback=self._show_dialog,
-      button_style=ButtonStyle.NORMAL,
-      text_alignment=rl.GuiTextAlignment.TEXT_ALIGN_LEFT,
-      text_padding=50
-    )
 
   def _read_mode_from_file(self):
     """Read cruise speed mode from file"""
@@ -76,8 +69,26 @@ class CruiseSpeedModeButton(Widget):
         self._dialog = None
       return
 
-    # Render button
-    self._button.render(rect)
+    # Render button manually (similar to other settings buttons)
+    button_text = f"Cruise Speed Mode: {self.MODE_NAMES[self._mode]}"
+
+    # Draw button background
+    rl.draw_rectangle_rec(rect, rl.Color(40, 40, 40, 255))
+
+    # Draw text
+    from openpilot.system.ui.lib.application import gui_app
+    font = gui_app.font()
+    text_size = 40
+    text_color = rl.WHITE
+
+    rl.draw_text_ex(font, button_text,
+                    rl.Vector2(rect.x + 50, rect.y + (rect.height - text_size) / 2),
+                    text_size, 1, text_color)
+
+    # Check for click
+    if rl.check_collision_point_rec(rl.get_mouse_position(), rect):
+      if rl.is_mouse_button_pressed(rl.MouseButton.MOUSE_BUTTON_LEFT):
+        self._show_dialog()
 
 
 class CruiseLayout(Widget):

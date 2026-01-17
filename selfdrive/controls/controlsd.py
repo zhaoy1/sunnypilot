@@ -43,7 +43,7 @@ class Controls(ControlsExt):
 
     self.sm = messaging.SubMaster(['liveDelay', 'liveParameters', 'liveTorqueParameters', 'modelV2', 'selfdriveState',
                                    'liveCalibration', 'livePose', 'longitudinalPlan', 'carState', 'carOutput',
-                                   'driverMonitoringState', 'onroadEvents', 'driverAssistance',  'roadLimitSpeed', 'liveDelay'] + self.sm_services_ext,
+                                   'driverMonitoringState', 'onroadEvents', 'driverAssistance', 'liveDelay'] + self.sm_services_ext,
                                   poll='selfdriveState')
     self.pm = messaging.PubMaster(['carControl', 'controlsState'] + self.pm_services_ext)
 
@@ -76,11 +76,11 @@ class Controls(ControlsExt):
     CS = self.sm['carState']
 
     # --- Speed limit (same source as UI) ---
-    self.speed_limit_kph = None
-    rls = self.sm['roadLimitSpeed']
-
-    if rls.speedLimitValid:
-      self.speed_limit_ms = rls.speedLimit
+    # Note: roadLimitSpeed service doesn't exist, commenting out for now
+    # self.speed_limit_kph = None
+    # rls = self.sm['roadLimitSpeed']
+    # if rls.speedLimitValid:
+    #   self.speed_limit_ms = rls.speedLimit
 
     # Update VehicleModel
     lp = self.sm['liveParameters']
