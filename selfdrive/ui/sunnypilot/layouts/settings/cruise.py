@@ -27,7 +27,7 @@ class CruiseLayout(Widget):
     self._cruise_speed_mode_item = multiple_button_item_sp(
       title="Cruise Speed Mode",
       description="Select how cruise speed is set when engaging cruise control",
-      buttons=["Current Speed", "Speed Limit", "Speed Limit + 10%", "Speed Limit + 20%"],
+      buttons=["Cluster", "Speed Lmt", "10%+", "20%+"],
       selected_index=current_mode,
       button_width=250,  # Increased from 200 to prevent text overlap
       callback=self._set_cruise_speed_mode,
