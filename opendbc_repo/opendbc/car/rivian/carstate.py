@@ -46,10 +46,13 @@ class CarState(CarStateBase): #, CarStateExt):
     current_speed_kph = CS.vEgo * CV.MS_TO_KPH
     cluster_speed_kph = self.last_speed
 
+    print(f"[CARSTATE] Mode: {self.cruise_speed_mode}, SpeedLimit: {speed_limit_kph:.1f} kph, Current: {current_speed_kph:.1f} kph, Cluster: {cluster_speed_kph:.1f} kph")
+
     # Calculate cruise speed based on mode
     if self.cruise_speed_mode == 0:
       # Mode 0: Use cluster speed
       cruise_speed_kph = cluster_speed_kph
+      print(f"[CARSTATE] Mode 0 - Using cluster speed: {cruise_speed_kph:.1f} kph")
     elif speed_limit_kph > 0:
       # Modes 1-3: Use speed limit with offset
       if self.cruise_speed_mode == 1:  # Speed limit
@@ -63,13 +66,17 @@ class CarState(CarStateBase): #, CarStateExt):
 
       # Choose max between current speed and speed limit (with offset)
       cruise_speed_kph = max(current_speed_kph, speed_from_limit)
+      print(f"[CARSTATE] Mode {self.cruise_speed_mode} - Speed from limit: {speed_from_limit:.1f} kph, Final: {cruise_speed_kph:.1f} kph")
     else:
       # Modes 1-3 but no speed limit: Fall back to cluster speed
       cruise_speed_kph = cluster_speed_kph
+      print(f"[CARSTATE] Mode {self.cruise_speed_mode} - No speed limit, using cluster: {cruise_speed_kph:.1f} kph")
 
     # Apply Rivian-specific limits (20-85 mph) and set cruise speed
-    cruise_speed_kph = max(20 * CV.MPH_TO_KPH, min(cruise_speed_kph, 85 * CV.MPH_TO_KPH))
-    CS.cruiseState.speed = cruise_speed_kph * CV.KPH_TO_MS
+    cruise_speed_kph_limited = max(20 * CV.MPH_TO_KPH, min(cruise_speed_kph, 85 * CV.MPH_TO_KPH))
+    cruise_speed_ms = cruise_speed_kph_limited * CV.KPH_TO_MS
+    CS.cruiseState.speed = cruise_speed_ms
+    print(f"[CARSTATE] Final cruise speed: {cruise_speed_kph_limited:.1f} kph ({cruise_speed_ms:.1f} m/s)")
 
   def update(self, can_parsers) -> tuple[structs.CarState, structs.CarStateSP]:
     cp = can_parsers[Bus.pt]
