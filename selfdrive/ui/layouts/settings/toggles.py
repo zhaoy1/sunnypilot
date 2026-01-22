@@ -27,6 +27,10 @@ DESCRIPTIONS = {
     "In relaxed mode sunnypilot will stay further away from lead cars. On supported cars, you can cycle through these personalities with " +
     "your steering wheel distance button."
   ),
+  "CruiseSpeedMode": tr_noop(
+    "Select how cruise speed is initialized when engaging cruise control. " +
+    "Cluster Speed uses current vehicle speed. Speed Limit modes use posted speed limits with optional percentage increases."
+  ),
   "IsLdwEnabled": tr_noop(
     "Receive alerts to steer back into the lane when your vehicle drifts over a detected lane line " +
     "without a turn signal activated while driving over 31 mph (50 km/h)."
@@ -106,6 +110,16 @@ class TogglesLayout(Widget):
       icon="speed_limit.png"
     )
 
+    self._cruise_speed_mode_setting = multiple_button_item(
+      lambda: tr("Cruise Speed Mode"),
+      lambda: tr(DESCRIPTIONS["CruiseSpeedMode"]),
+      buttons=[lambda: tr("Cluster"), lambda: tr("Speed Limit"), lambda: tr("Limit +10%"), lambda: tr("Limit +20%")],
+      button_width=200,
+      callback=self._set_cruise_speed_mode,
+      selected_index=0,
+      icon="speed_limit.png"
+    )
+
     self._toggles = {}
     self._locked_toggles = set()
     for param, (title, desc, icon, needs_restart) in self._toggle_defs.items():
@@ -138,6 +152,7 @@ class TogglesLayout(Widget):
       # insert longitudinal personality after NDOG toggle
       if param == "DisengageOnAccelerator":
         self._toggles["LongitudinalPersonality"] = self._long_personality_setting
+        self._toggles["CruiseSpeedMode"] = self._cruise_speed_mode_setting
 
     self._update_experimental_mode_icon()
     self._scroller = Scroller(list(self._toggles.values()), line_separator=True, spacing=0)
@@ -246,3 +261,6 @@ class TogglesLayout(Widget):
 
   def _set_longitudinal_personality(self, button_index: int):
     self._params.put("LongitudinalPersonality", button_index)
+
+  def _set_cruise_speed_mode(self, button_index: int):
+    self._params.put_int("CruiseSpeedMode", button_index)
