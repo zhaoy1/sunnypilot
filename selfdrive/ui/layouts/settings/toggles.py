@@ -113,8 +113,8 @@ class TogglesLayout(Widget):
     self._cruise_speed_mode_setting = multiple_button_item(
       lambda: tr("Cruise Speed Mode"),
       lambda: tr(DESCRIPTIONS["CruiseSpeedMode"]),
-      buttons=[lambda: tr("Cluster"), lambda: tr("Speed Limit"), lambda: tr("Limit +10%"), lambda: tr("Limit +20%")],
-      button_width=200,
+      buttons=[lambda: tr("Cluster"), lambda: tr("Speed Limit"), lambda: tr("10%+"), lambda: tr("20%+")],
+      button_width=450,
       callback=self._set_cruise_speed_mode,
       selected_index=0,
       icon="speed_limit.png"
