@@ -110,13 +110,19 @@ class TogglesLayout(Widget):
       icon="speed_limit.png"
     )
 
+    # Get current cruise speed mode, default to 0 if not set
+    try:
+      current_cruise_mode = self._params.get_int("CruiseSpeedMode")
+    except (ValueError, TypeError):
+      current_cruise_mode = 0
+
     self._cruise_speed_mode_setting = multiple_button_item(
       lambda: tr("Cruise Speed Mode"),
       lambda: tr(DESCRIPTIONS["CruiseSpeedMode"]),
       buttons=[lambda: tr("Cluster"), lambda: tr("Speed Limit"), lambda: tr("10%+"), lambda: tr("20%+")],
       button_width=350,
       callback=self._set_cruise_speed_mode,
-      selected_index=0,
+      selected_index=current_cruise_mode,
       icon="speed_limit.png"
     )
 
