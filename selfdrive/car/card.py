@@ -17,6 +17,7 @@ from opendbc.car.carlog import carlog
 from opendbc.car.fw_versions import ObdCallback
 from opendbc.car.car_helpers import get_car, interfaces
 from opendbc.car.interfaces import CarInterfaceBase, RadarInterfaceBase
+from opendbc.car.common.conversions import Conversions as CV
 from openpilot.selfdrive.pandad import can_capnp_to_list, can_list_to_can_capnp
 from openpilot.selfdrive.car.cruise import VCruiseHelper
 from openpilot.selfdrive.car.car_specific import MockCarState
@@ -203,6 +204,27 @@ class Car:
     if self.CP.brand == 'mock':
       CS, CS_SP = self.mock_carstate.update(CS, CS_SP)
 
+    # Pass speed limit from map data to carstate for cruise speed calculation
+    if self.sm.valid['liveMapDataSP'] and self.sm['liveMapDataSP'].speedLimitValid:
+      speed_limit_ms = self.sm['liveMapDataSP'].speedLimit
+      if speed_limit_ms > 0:
+        # Pass speed limit to carstate (it will handle the cruise speed mode logic)
+        if hasattr(self.CI.CS, 'speed_limit_kph'):
+          self.CI.CS.speed_limit_kph = speed_limit_ms * CV.MS_TO_KPH
+          # Let carstate recalculate cruise speed with updated speed limit
+          if hasattr(self.CI.CS, 'calculate_cruise_speed_with_limit'):
+            CS.cruiseState.speed = self.CI.CS.calculate_cruise_speed_with_limit()
+      else:
+        if hasattr(self.CI.CS, 'speed_limit_kph'):
+          self.CI.CS.speed_limit_kph = 0.0
+          if hasattr(self.CI.CS, 'calculate_cruise_speed_with_limit'):
+            CS.cruiseState.speed = self.CI.CS.calculate_cruise_speed_with_limit()
+    else:
+      if hasattr(self.CI.CS, 'speed_limit_kph'):
+        self.CI.CS.speed_limit_kph = 0.0
+        if hasattr(self.CI.CS, 'calculate_cruise_speed_with_limit'):
+          CS.cruiseState.speed = self.CI.CS.calculate_cruise_speed_with_limit()
+
     # Update radar tracks from CAN
     RD: structs.RadarDataT | None = self.RI.update(can_list)
 
@@ -218,20 +240,6 @@ class Car:
       self.can_log_mono_time = messaging.log_from_bytes(can_strs[0]).logMonoTime
 
     self.v_cruise_helper.update_speed_limit_assist(self.is_metric, self.sm['longitudinalPlanSP'])
-
-    # Update speed limit from liveMapDataSP for cruise speed mode and UI display
-    # Speed limits come from map data in m/s and are converted to kph for internal use,
-    # independent of UI metric/imperial display units
-    if self.sm.valid['liveMapDataSP'] and self.sm['liveMapDataSP'].speedLimitValid:
-      speed_limit_ms = self.sm['liveMapDataSP'].speedLimit
-      if speed_limit_ms > 0:  # Ensure we have a valid positive speed limit
-        self.v_cruise_helper.update_speed_limit(speed_limit_ms)
-        # Update CarStateSP with speed limit for UI display (in m/s)
-        CS_SP.speedLimit = speed_limit_ms
-      else:
-        CS_SP.speedLimit = 0.0
-    else:
-      CS_SP.speedLimit = 0.0
 
     self.v_cruise_helper.update_v_cruise(CS, self.sm['carControl'].enabled, self.is_metric)
     if self.sm['carControl'].enabled and not self.CC_prev.enabled:
