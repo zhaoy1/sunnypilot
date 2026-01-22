@@ -7,7 +7,7 @@ See the LICENSE.md file in the root directory for more details.
 from openpilot.common.params import Params
 from openpilot.system.ui.widgets import Widget
 from openpilot.system.ui.widgets.scroller_tici import Scroller
-from openpilot.system.ui.sunnypilot.widgets.list_view import multiple_button_item_sp
+from openpilot.system.ui.sunnypilot.widgets.list_view import multiple_button_item_sp, LineSeparator
 
 
 class CruiseLayout(Widget):
@@ -29,12 +29,15 @@ class CruiseLayout(Widget):
       description="Select how cruise speed is set when engaging cruise control",
       buttons=["Cluster", "Speed Lmt", "10%+", "20%+"],
       selected_index=current_mode,
-      button_width=250,  # Increased from 200 to prevent text overlap
+      button_width=250,
       callback=self._set_cruise_speed_mode,
-      icon="speed_limit.png"
+      inline=True
     )
 
-    items = [self._cruise_speed_mode_item]
+    items = [
+      self._cruise_speed_mode_item,
+      LineSeparator(),
+    ]
     self._scroller = Scroller(items, line_separator=True, spacing=0)
 
   def _set_cruise_speed_mode(self, button_index: int):
