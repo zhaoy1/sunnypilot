@@ -1,3 +1,5 @@
+
+
 from opendbc.car import get_safety_config, structs
 from opendbc.car.interfaces import CarInterfaceBase
 from opendbc.car.rivian.carcontroller import CarController
@@ -25,8 +27,9 @@ class CarInterface(CarInterfaceBase):
     ret.steerControlType = structs.CarParams.SteerControlType.torque
     ret.radarUnavailable = True
 
-    # TODO: pending finding/handling missing set speed
-    ret.alphaLongitudinalAvailable = False
+    # TODO: pending finding/handling missing set speed and fixing up radar parser
+    # ret.alphaLongitudinalAvailable = False
+    ret.alphaLongitudinalAvailable = True
     if alpha_long:
       ret.openpilotLongitudinalControl = True
       ret.safetyConfigs[0].safetyParam |= RivianSafetyFlags.LONG_CONTROL.value
@@ -45,6 +48,11 @@ class CarInterface(CarInterfaceBase):
       stock_cp.radarUnavailable = False
       stock_cp.enableBsm = True
       stock_cp.alphaLongitudinalAvailable = True
+
+    ret.flags |= RivianFlagsSP.LONGITUDINAL_HARNESS_UPGRADE.value
+    stock_cp.radarUnavailable = True
+    stock_cp.enableBsm = False
+    stock_cp.alphaLongitudinalAvailable = True
 
     if alpha_long and stock_cp.alphaLongitudinalAvailable:
       stock_cp.openpilotLongitudinalControl = True
