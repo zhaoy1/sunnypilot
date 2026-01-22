@@ -192,6 +192,73 @@ class Car:
     # log fingerprint in sentry
     sunnypilot_interfaces.log_fingerprint(self.CP)
 
+  def read_cruise_speed_mode(self):
+    """Read cruise speed mode from file"""
+    try:
+      with open("/data/params/d/CruiseSpeedMode", 'r') as f:
+        return int(f.read().strip())
+    except (FileNotFoundError, ValueError):
+      return 0
+
+  def apply_cruise_speed_mode(self, CS, CS_SP):
+    """Apply cruise speed mode logic based on speed limit and mode settings"""
+    # Get speed limit from map data
+    speed_limit_ms = 0.0
+    if self.sm.valid['liveMapDataSP'] and self.sm['liveMapDataSP'].speedLimitValid:
+      speed_limit_ms = self.sm['liveMapDataSP'].speedLimit
+      CS_SP.speedLimit = speed_limit_ms
+      print(f"[CARD] Speed limit: {speed_limit_ms:.1f} m/s ({speed_limit_ms * CV.MS_TO_KPH:.1f} kph)")
+    else:
+      CS_SP.speedLimit = 0.0
+      print(f"[CARD] No speed limit available")
+
+    # Read cruise speed mode
+    cruise_speed_mode = self.read_cruise_speed_mode()
+    print(f"[CARD] Cruise speed mode: {cruise_speed_mode}")
+
+    # Apply speed limit with offset only when:
+    # 1. offset mode is not zero
+    # 2. cruiseState is available and not enabled
+    # 3. speed limit plus offset is higher than current speed
+    if (cruise_speed_mode != 0 and
+        CS.cruiseState.available and
+        not CS.cruiseState.enabled and
+        speed_limit_ms > 0):
+
+      # Calculate speed limit with offset
+      speed_limit_kph = speed_limit_ms * CV.MS_TO_KPH
+      if cruise_speed_mode == 1:  # Speed limit
+        target_speed_kph = speed_limit_kph
+      elif cruise_speed_mode == 2:  # Speed limit + 10%
+        target_speed_kph = speed_limit_kph * 1.10
+      elif cruise_speed_mode == 3:  # Speed limit + 20%
+        target_speed_kph = speed_limit_kph * 1.20
+      else:
+        target_speed_kph = speed_limit_kph
+
+      current_speed_kph = CS.vEgo * CV.MS_TO_KPH
+
+      # Only apply if target speed is higher than current speed
+      if target_speed_kph > current_speed_kph:
+        # Apply Rivian-specific limits (20-85 mph)
+        target_speed_kph = max(20 * CV.MPH_TO_KPH, min(target_speed_kph, 85 * CV.MPH_TO_KPH))
+        target_speed_ms = target_speed_kph * CV.KPH_TO_MS
+        CS.cruiseState.speed = target_speed_ms
+        print(f"[CARD] Applied cruise speed mode {cruise_speed_mode}: {target_speed_kph:.1f} kph ({target_speed_ms:.1f} m/s)")
+      else:
+        print(f"[CARD] Target speed {target_speed_kph:.1f} kph <= current speed {current_speed_kph:.1f} kph, not applied")
+    else:
+      reasons = []
+      if cruise_speed_mode == 0:
+        reasons.append("mode is 0")
+      if not CS.cruiseState.available:
+        reasons.append("cruise not available")
+      if CS.cruiseState.enabled:
+        reasons.append("cruise already enabled")
+      if speed_limit_ms <= 0:
+        reasons.append("no speed limit")
+      print(f"[CARD] Cruise speed mode not applied: {', '.join(reasons)}")
+
   def state_update(self) -> tuple[car.CarState, custom.CarStateSP, structs.RadarDataT | None]:
     """carState update loop, driven by can"""
 
@@ -204,35 +271,13 @@ class Car:
     if self.CP.brand == 'mock':
       CS, CS_SP = self.mock_carstate.update(CS, CS_SP)
 
-    # Set speed limit in CS_SP for carstate to use
-    if self.sm.valid['liveMapDataSP'] and self.sm['liveMapDataSP'].speedLimitValid:
-      speed_limit_ms = self.sm['liveMapDataSP'].speedLimit
-      CS_SP.speedLimit = speed_limit_ms
-      print(f"[CARD] Speed limit: {speed_limit_ms:.1f} m/s ({speed_limit_ms * CV.MS_TO_KPH:.1f} kph) - Valid: {self.sm['liveMapDataSP'].speedLimitValid}")
-    else:
-      CS_SP.speedLimit = 0.0
-      valid_status = self.sm.valid.get('liveMapDataSP', False)
-      speed_limit_valid = self.sm['liveMapDataSP'].speedLimitValid if self.sm.valid.get('liveMapDataSP', False) else False
-      speed_limit_value = self.sm['liveMapDataSP'].speedLimit if self.sm.valid.get('liveMapDataSP', False) else 0.0
-      print(f"[CARD] No speed limit - liveMapDataSP valid: {valid_status}, speedLimitValid: {speed_limit_valid}, speedLimit: {speed_limit_value:.1f}")
-
-    # Let carstate update cruise speed based on speed limit in CS_SP
-    if hasattr(self.CI.CS, 'update_cruise_speed_from_cs_sp'):
-      self.CI.CS.update_cruise_speed_from_cs_sp(CS, CS_SP)
-      print(f"[CARD] Called carstate.update_cruise_speed_from_cs_sp")
-    else:
-      print(f"[CARD] CarState does not have update_cruise_speed_from_cs_sp method")
+    # Apply cruise speed mode logic for speed limit based cruise
+    self.apply_cruise_speed_mode(CS, CS_SP)
 
     # Update radar tracks from CAN
     RD: structs.RadarDataT | None = self.RI.update(can_list)
 
     self.sm.update(0)
-
-    # Debug: Log SubMaster status for liveMapDataSP
-    print(f"[CARD] SubMaster - liveMapDataSP valid: {self.sm.valid.get('liveMapDataSP', False)}, alive: {self.sm.alive.get('liveMapDataSP', False)}, updated: {self.sm.updated.get('liveMapDataSP', False)}")
-    if self.sm.valid.get('liveMapDataSP', False):
-      map_data = self.sm['liveMapDataSP']
-      print(f"[CARD] liveMapDataSP - speedLimitValid: {map_data.speedLimitValid}, speedLimit: {map_data.speedLimit:.1f} m/s")
 
     can_rcv_valid = len(can_strs) > 0
 
