@@ -203,14 +203,14 @@ class Car:
   def apply_cruise_speed_mode(self, CS, CS_SP):
     """Apply cruise speed mode logic based on speed limit and mode settings"""
     # Get speed limit from map data
-    speed_limit_ms = 0.0
     if self.sm.valid['liveMapDataSP'] and self.sm['liveMapDataSP'].speedLimitValid:
       speed_limit_ms = self.sm['liveMapDataSP'].speedLimit
       CS_SP.speedLimit = speed_limit_ms
       print(f"[CARD] Speed limit: {speed_limit_ms:.1f} m/s ({speed_limit_ms * CV.MS_TO_KPH:.1f} kph)")
     else:
       CS_SP.speedLimit = 0.0
-      print(f"[CARD] No speed limit available")
+      print("[CARD] No speed limit info is available")
+      return
 
     # Read cruise speed mode
     cruise_speed_mode = self.read_cruise_speed_mode()
@@ -222,31 +222,23 @@ class Car:
     # 3. speed limit plus offset is higher than current speed
     if (cruise_speed_mode != 0 and
         CS.cruiseState.available and
-        not CS.cruiseState.enabled and
-        speed_limit_ms > 0):
+        not CS.cruiseState.enabled):
 
       # Calculate speed limit with offset
-      speed_limit_kph = speed_limit_ms * CV.MS_TO_KPH
-      if cruise_speed_mode == 1:  # Speed limit
-        target_speed_kph = speed_limit_kph
-      elif cruise_speed_mode == 2:  # Speed limit + 10%
-        target_speed_kph = speed_limit_kph * 1.10
+      target_speed_ms = speed_limit_ms
+      if cruise_speed_mode == 2:  # Speed limit + 10%
+        target_speed_ms = speed_limit_ms * 1.10
       elif cruise_speed_mode == 3:  # Speed limit + 20%
-        target_speed_kph = speed_limit_kph * 1.20
-      else:
-        target_speed_kph = speed_limit_kph
-
-      current_speed_kph = CS.vEgo * CV.MS_TO_KPH
+        target_speed_ms = speed_limit_ms * 1.20
 
       # Only apply if target speed is higher than current speed
-      if target_speed_kph > current_speed_kph:
+      if target_speed_ms > CS.vEgo:
         # Apply Rivian-specific limits (20-85 mph)
-        target_speed_kph = max(20 * CV.MPH_TO_KPH, min(target_speed_kph, 85 * CV.MPH_TO_KPH))
-        target_speed_ms = target_speed_kph * CV.KPH_TO_MS
+        target_speed_ms = max(20 * CV.MPH_TO_MS, min(target_speed_ms, 85 * CV.MPH_TO_MS))
         CS.cruiseState.speed = target_speed_ms
-        print(f"[CARD] Applied cruise speed mode {cruise_speed_mode}: {target_speed_kph:.1f} kph ({target_speed_ms:.1f} m/s)")
+        print(f"[CARD] Applied cruise speed mode {cruise_speed_mode}: {target_speed_ms:.1f} m/s ({target_speed_ms * CV.MS_TO_KPH:.1f} kph)")
       else:
-        print(f"[CARD] Target speed {target_speed_kph:.1f} kph <= current speed {current_speed_kph:.1f} kph, not applied")
+        print(f"[CARD] Target speed {target_speed_ms * CV.MS_TO_KPH:.1f} kph <= current speed {CS.vEgo * CV.MS_TO_KPH:.1f} kph, not applied")
     else:
       reasons = []
       if cruise_speed_mode == 0:
@@ -255,11 +247,7 @@ class Car:
         reasons.append("cruise not available")
       if CS.cruiseState.enabled:
         reasons.append("cruise already enabled")
-      if speed_limit_ms <= 0:
-        reasons.append("no speed limit")
       print(f"[CARD] Cruise speed mode not applied: {', '.join(reasons)}")
-
-  def state_update(self) -> tuple[car.CarState, custom.CarStateSP, structs.RadarDataT | None]:
     """carState update loop, driven by can"""
 
     can_strs = messaging.drain_sock_raw(self.can_sock, wait_for_one=True)

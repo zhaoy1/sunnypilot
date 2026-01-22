@@ -1,3 +1,4 @@
+
 import copy
 from opendbc.can import CANParser
 from opendbc.car import Bus, structs
@@ -52,7 +53,6 @@ class CarState(CarStateBase): #, CarStateExt):
     # Cruise state
     ret.cruiseState.enabled = cp_cam.vl["ACM_Status"]["ACM_FeatureStatus"] == 1
 
-    # Track cluster speed for cruise control
     if not ret.cruiseState.enabled:
       cluster_speed = int(cp_adas.vl["Cluster"]["Cluster_VehicleSpeed"])
       self.last_speed = cluster_speed
@@ -60,6 +60,13 @@ class CarState(CarStateBase): #, CarStateExt):
       cluster_speed = cp_adas.vl["Cluster"]["Cluster_VehicleSpeed"]
       self.last_speed = max(cluster_speed, self.last_speed)
 
+    ret.cruiseState.speed = max(
+      20 * CV.MPH_TO_MS,
+      min(self.last_speed * conversion, 85 * CV.MPH_TO_MS)
+    )
+
+    if not self.CP.openpilotLongitudinalControl:
+      ret.cruiseState.speed = -1
     ret.cruiseState.available = True  # cp.vl["VDM_AdasSts"]["VDM_AdasInterfaceStatus"] == 1
     ret.cruiseState.standstill = cp.vl["VDM_AdasSts"]["VDM_AdasVehicleHoldStatus"] == 1
 
