@@ -248,6 +248,8 @@ class Car:
       if CS.cruiseState.enabled:
         reasons.append("cruise already enabled")
       print(f"[CARD] Cruise speed mode not applied: {', '.join(reasons)}")
+
+  def state_update(self) -> tuple[car.CarState, custom.CarStateSP, structs.RadarDataT | None]:
     """carState update loop, driven by can"""
 
     can_strs = messaging.drain_sock_raw(self.can_sock, wait_for_one=True)
