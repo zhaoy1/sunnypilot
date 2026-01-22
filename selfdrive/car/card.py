@@ -216,12 +216,12 @@ class Car:
       speed_limit_value = self.sm['liveMapDataSP'].speedLimit if self.sm.valid.get('liveMapDataSP', False) else 0.0
       print(f"[CARD] No speed limit - liveMapDataSP valid: {valid_status}, speedLimitValid: {speed_limit_valid}, speedLimit: {speed_limit_value:.1f}")
 
-    # Let carstate update cruise speed based on speed limit and mode
-    if hasattr(self.CI.CS, 'update_cruise_speed_from_limit'):
-      self.CI.CS.update_cruise_speed_from_limit(CS_SP.speedLimit, CS)
-      print(f"[CARD] Called carstate.update_cruise_speed_from_limit with {CS_SP.speedLimit:.1f} m/s")
+    # Let carstate update cruise speed based on speed limit in CS_SP
+    if hasattr(self.CI.CS, 'update_cruise_speed_from_cs_sp'):
+      self.CI.CS.update_cruise_speed_from_cs_sp(CS, CS_SP)
+      print(f"[CARD] Called carstate.update_cruise_speed_from_cs_sp")
     else:
-      print(f"[CARD] CarState does not have update_cruise_speed_from_limit method")
+      print(f"[CARD] CarState does not have update_cruise_speed_from_cs_sp method")
 
     # Update radar tracks from CAN
     RD: structs.RadarDataT | None = self.RI.update(can_list)

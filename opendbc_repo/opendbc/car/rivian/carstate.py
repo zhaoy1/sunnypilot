@@ -32,21 +32,22 @@ class CarState(CarStateBase): #, CarStateExt):
     except (FileNotFoundError, ValueError):
       self.cruise_speed_mode = 0
 
-  def update_cruise_speed_from_limit(self, speed_limit_ms: float, CS):
-    """Update cruise speed based on speed limit and cruise speed mode.
-    Called from card.py with speed limit info.
+  def update_cruise_speed_from_cs_sp(self, CS, CS_SP):
+    """Update cruise speed based on speed limit in CS_SP and cruise speed mode.
+    Called from card.py after CS_SP.speedLimit is set.
     """
     # Re-read cruise speed mode to pick up changes from Settings UI
     self.read_cruise_speed_mode()
 
-    # Convert speed limit to kph
+    # Get speed limit from CS_SP and convert to kph
+    speed_limit_ms = CS_SP.speedLimit
     speed_limit_kph = speed_limit_ms * CV.MS_TO_KPH if speed_limit_ms > 0 else 0.0
 
     # Get current speeds
     current_speed_kph = CS.vEgo * CV.MS_TO_KPH
     cluster_speed_kph = self.last_speed
 
-    print(f"[CARSTATE] Mode: {self.cruise_speed_mode}, SpeedLimit: {speed_limit_kph:.1f} kph, Current: {current_speed_kph:.1f} kph, Cluster: {cluster_speed_kph:.1f} kph")
+    print(f"[CARSTATE] Mode: {self.cruise_speed_mode}, SpeedLimit: {speed_limit_kph:.1f} kph (from CS_SP: {speed_limit_ms:.1f} m/s), Current: {current_speed_kph:.1f} kph, Cluster: {cluster_speed_kph:.1f} kph")
 
     # Calculate cruise speed based on mode
     if self.cruise_speed_mode == 0:
