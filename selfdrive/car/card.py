@@ -204,26 +204,14 @@ class Car:
     if self.CP.brand == 'mock':
       CS, CS_SP = self.mock_carstate.update(CS, CS_SP)
 
-    # Pass speed limit from map data to carstate for cruise speed calculation
+    # Fetch speed limit from map data and pass to carstate
+    speed_limit_ms = 0.0
     if self.sm.valid['liveMapDataSP'] and self.sm['liveMapDataSP'].speedLimitValid:
       speed_limit_ms = self.sm['liveMapDataSP'].speedLimit
-      if speed_limit_ms > 0:
-        # Pass speed limit to carstate (it will handle the cruise speed mode logic)
-        if hasattr(self.CI.CS, 'speed_limit_kph'):
-          self.CI.CS.speed_limit_kph = speed_limit_ms * CV.MS_TO_KPH
-          # Let carstate recalculate cruise speed with updated speed limit
-          if hasattr(self.CI.CS, 'calculate_cruise_speed_with_limit'):
-            CS.cruiseState.speed = self.CI.CS.calculate_cruise_speed_with_limit()
-      else:
-        if hasattr(self.CI.CS, 'speed_limit_kph'):
-          self.CI.CS.speed_limit_kph = 0.0
-          if hasattr(self.CI.CS, 'calculate_cruise_speed_with_limit'):
-            CS.cruiseState.speed = self.CI.CS.calculate_cruise_speed_with_limit()
-    else:
-      if hasattr(self.CI.CS, 'speed_limit_kph'):
-        self.CI.CS.speed_limit_kph = 0.0
-        if hasattr(self.CI.CS, 'calculate_cruise_speed_with_limit'):
-          CS.cruiseState.speed = self.CI.CS.calculate_cruise_speed_with_limit()
+
+    # Call carstate with speed limit info (carstate will handle cruise speed mode logic)
+    if hasattr(self.CI.CS, 'update_cruise_speed_with_limit'):
+      self.CI.CS.update_cruise_speed_with_limit(speed_limit_ms, CS)
 
     # Update radar tracks from CAN
     RD: structs.RadarDataT | None = self.RI.update(can_list)
