@@ -204,14 +204,15 @@ class Car:
     if self.CP.brand == 'mock':
       CS, CS_SP = self.mock_carstate.update(CS, CS_SP)
 
-    # Fetch speed limit from map data and pass to carstate
-    speed_limit_ms = 0.0
+    # Set speed limit in CS_SP for carstate to use
     if self.sm.valid['liveMapDataSP'] and self.sm['liveMapDataSP'].speedLimitValid:
-      speed_limit_ms = self.sm['liveMapDataSP'].speedLimit
+      CS_SP.speedLimit = self.sm['liveMapDataSP'].speedLimit
+    else:
+      CS_SP.speedLimit = 0.0
 
-    # Call carstate with speed limit info (carstate will handle cruise speed mode logic)
-    if hasattr(self.CI.CS, 'update_cruise_speed_with_limit'):
-      self.CI.CS.update_cruise_speed_with_limit(speed_limit_ms, CS)
+    # Let carstate update cruise speed based on speed limit and mode
+    if hasattr(self.CI.CS, 'update_cruise_speed_from_limit'):
+      self.CI.CS.update_cruise_speed_from_limit(CS_SP.speedLimit, CS)
 
     # Update radar tracks from CAN
     RD: structs.RadarDataT | None = self.RI.update(can_list)

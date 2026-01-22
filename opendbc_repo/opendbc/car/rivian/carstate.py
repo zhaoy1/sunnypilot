@@ -32,7 +32,7 @@ class CarState(CarStateBase): #, CarStateExt):
     except (FileNotFoundError, ValueError):
       self.cruise_speed_mode = 0
 
-  def update_cruise_speed_with_limit(self, speed_limit_ms: float, CS):
+  def update_cruise_speed_from_limit(self, speed_limit_ms: float, CS):
     """Update cruise speed based on speed limit and cruise speed mode.
     Called from card.py with speed limit info.
     """
